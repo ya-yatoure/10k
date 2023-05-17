@@ -12,9 +12,9 @@ print(f"Number of GPUs: {torch.cuda.device_count()}")
 data_path = "../data/"
 hand_path = "./"
 
-output_path = "10k/pre_training_DistillBERT/"
-checkpoint_path = "10k/pre_training_DistillBERT/checkpoints/"
-final_model_path = "10k/pre_training_DistillBERT/final/"
+output_path = "pre_training_DistillBERT/"
+checkpoint_path = "pre_training_DistillBERT/checkpoints/"
+final_model_path = "pre_training_DistillBERT/final/"
 
 # check if the output directories exist and, if not, create them
 for dir_path in [output_path, checkpoint_path, final_model_path]:
@@ -25,11 +25,11 @@ for dir_path in [output_path, checkpoint_path, final_model_path]:
         print(f"Directory {dir_path} already exists")
 
 # open YAML file with parameters for pretraining
-stream = open("10k/pre_training_DistillBERT/distilbert_params.yaml", 'r')
+stream = open("pre_training_DistillBERT/distilbert_params.yaml", 'r')
 params = yaml.load(stream, Loader=yaml.Loader)
 
 # Load the data
-df = pd.read_csv("10k/pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
 df = df[['text']]
 
 # Transform into Dataset class
