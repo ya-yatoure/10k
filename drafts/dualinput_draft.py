@@ -119,12 +119,34 @@ for epoch in range(epochs):
         print(f"{'Train' if is_training else 'Validation'} loss per observation {avg_loss}")
         (train_losses if is_training else val_losses).append(avg_loss)
 
+
+...
+
 plt.plot(train_losses, label='Training Loss per observation')
 plt.plot(val_losses, label='Validation Loss per observation')
 plt.xlabel('Epoch')
 plt.ylabel('Loss per observation')
 plt.legend()
-plt.show()
 
+# Save the plot as an image file
+plot_filename = 'plot.png'
+plt.savefig(plot_filename)
+plt.close()
 
+from git import Repo, Actor
 
+# Path to your local repository
+# Note: Replace this path with the actual path to your local git repository
+repo_path = '/10k/drafts'  
+repo = Repo(repo_path)
+
+# Create a new commit
+index = repo.index
+index.add([plot_filename])
+author = Actor("ya-yatoure", "uctpbh1@ucl.ac.uk")  # Replace with your name and email
+commit_message = 'Add plot'
+index.commit(commit_message, author=author)
+
+# Push the commit to the remote repository
+origin = repo.remote('origin')
+origin.push()
