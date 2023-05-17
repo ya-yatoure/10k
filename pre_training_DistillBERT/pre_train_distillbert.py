@@ -69,6 +69,11 @@ training_args = TrainingArguments(checkpoint_path,
                                 logging_steps=params["logging_steps"]
                                 )
 
+# Define a progress callback function
+def progress_callback(info, state):
+    if state.is_local_process_zero:
+        print(f"Progress: {info.epoch}/{info.num_epochs} | {info.step}/{info.num_steps}")
+
 # Initialize our Trainer
 trainer = Trainer(
     model=model,
@@ -76,6 +81,7 @@ trainer = Trainer(
     train_dataset=tokenized_datasets,
     tokenizer=tokenizer,
     data_collator=data_collator,
+    callbacks=[progress_callback],  # Add the progress callback
 )
 
 # TRAIN!
