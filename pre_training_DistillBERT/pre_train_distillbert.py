@@ -29,7 +29,7 @@ stream = open("10k/pre_training_DistillBERT/distilbert_params.yaml", 'r')
 params = yaml.load(stream, Loader=yaml.Loader)
 
 # Load the data
-df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("10k/pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
 df = df[['text']]
 
 # Transform into Dataset class
