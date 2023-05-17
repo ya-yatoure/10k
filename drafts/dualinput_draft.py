@@ -94,10 +94,12 @@ epochs = 50
 batch_size = 32
 train_losses, val_losses = [], []
 
+
+
 for epoch in range(epochs):
     for dataloader, is_training in [(train_dataloader, True), (val_dataloader, False)]:
-        total_loss = total_samples = 0
         model.train(is_training)
+        epoch_losses = []
 
         for batch in dataloader:
             *inputs, targets = (t.to(device) for t in batch)
@@ -112,15 +114,16 @@ for epoch in range(epochs):
                 loss.backward()
                 optimizer.step()
 
-            total_loss += loss.item() * targets.size(0)
-            total_samples += targets.size(0)
+            # Save MSE for this batch
+            epoch_losses.append(loss.item())
 
-        avg_loss = total_loss / total_samples
+        # Compute average MSE for this epoch and divide by batch size
+        avg_loss = sum(epoch_losses) / len(epoch_losses) / len(batch)
         print(f"{'Train' if is_training else 'Validation'} loss per observation {avg_loss}")
         (train_losses if is_training else val_losses).append(avg_loss)
 
 
-...
+
 
 plt.plot(train_losses, label='Training Loss per observation')
 plt.plot(val_losses, label='Validation Loss per observation')
