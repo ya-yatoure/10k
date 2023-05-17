@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Load and preprocess data
 df = pd.read_csv('2019_10kdata_with_covars_sample.csv')
-df_sample = df.sample(n=640)
+df_sample = df.sample(n=6400)
 
 # Tokenize the text data
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
