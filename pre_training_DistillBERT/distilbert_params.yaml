@@ -1,5 +1,5 @@
 batch_size: 16
-eval_steps: 500
+eval_steps: 50
 learning_rate: 5.0e-05
 logging_steps: 100
 max_sent_size: 512
