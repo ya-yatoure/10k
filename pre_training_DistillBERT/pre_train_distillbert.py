@@ -5,11 +5,9 @@ import yaml
 from datasets import Dataset
 import torch
 
-# Get the current directory path
-current_directory = os.getcwd()
+# You are already in the "10k" directory
+os.chdir("pre_training_DistillBERT")
 
-# Set the working directory
-os.chdir(os.path.join(current_directory, "10k/pre_training_DistillBERT"))
 
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
