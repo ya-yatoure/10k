@@ -76,14 +76,15 @@ training_args = TrainingArguments(checkpoint_path,
                                 )
 
 
-# Initialize our Trainer
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=tokenized_datasets,
+    train_dataset=tokenized_train_dataset,
+    eval_dataset=tokenized_eval_dataset,
     tokenizer=tokenizer,
     data_collator=data_collator,
 )
+
 
 # TRAIN!
 train_result = trainer.train()
