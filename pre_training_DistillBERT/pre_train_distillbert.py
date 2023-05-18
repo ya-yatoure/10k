@@ -69,12 +69,14 @@ training_args = TrainingArguments(
                                 learning_rate=learning_rate,
                                 per_device_train_batch_size=batch_size,
                                 per_device_eval_batch_size=batch_size,
-                                num_train_epochs=params["epochs"],
+                                max_steps=params["steps"],
                                 warmup_ratio=params["warmup_ratio"],
                                 evaluation_strategy="steps",
                                 eval_steps=params["eval_steps"],
                                 save_strategy="no",
                                 logging_dir=checkpoint_path,
+                                #save_steps=25000,
+                                #save_total_limit=1,
                                 logging_strategy="steps",
                                 logging_steps=params["logging_steps"]
                                 )
