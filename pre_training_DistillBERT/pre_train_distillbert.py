@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from transformers import DistilBertTokenizer, DistilBertForMaskedLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer
 import yaml
 from datasets import Dataset
@@ -31,24 +30,29 @@ params = yaml.load(stream, Loader=yaml.Loader)
 
 # Load the data
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
+df = df.sample(frac=1.0)  # Shuffle the dataset
 df = df[['text']]
 
-# Split the data into training and eval set
-train_df, eval_df = train_test_split(df, test_size=0.2)
-
-# Transform into Dataset class
-train_dataset = Dataset.from_pandas(train_df)
-eval_dataset = Dataset.from_pandas(eval_df)
+# Transform into Dataset class and split into train/test
+full_dataset = Dataset.from_pandas(df)
+test_frac = params["test_frac"]
+seed = params["seed"]
+full_dataset = full_dataset.train_test_split(test_size=test_frac, seed=seed)
 
 # Tokenize text
 model_name = params["model_name"]
 tokenizer = DistilBertTokenizer.from_pretrained(model_name)
 model = DistilBertForMaskedLM.from_pretrained(model_name)
 
+# Extend the tokenizer and model vocab with special tokens
+tokenizer.add_tokens("\n")
+model.resize_token_embeddings(len(tokenizer)) 
+
 # Tokenization
 max_sent_size = params["max_sent_size"]
-tokenized_train_dataset = train_dataset.map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
-tokenized_eval_dataset = eval_dataset.map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
+tokenized_datasets = {}
+for split in ['train', 'test']:
+    tokenized_datasets[split] = full_dataset[split].map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
 
 # Prepare Masking
 data_collator = DataCollatorForLanguageModeling(
@@ -61,11 +65,12 @@ data_collator = DataCollatorForLanguageModeling(
 learning_rate = float(params["learning_rate"])
 batch_size = int(params["batch_size"])
 
-training_args = TrainingArguments(checkpoint_path,
+training_args = TrainingArguments(
+                                output_dir=checkpoint_path,
                                 learning_rate=learning_rate,
                                 per_device_train_batch_size=batch_size,
                                 per_device_eval_batch_size=batch_size,
-                                max_steps=params["steps"],
+                                num_train_epochs=params["epochs"],
                                 warmup_ratio=params["warmup_ratio"],
                                 evaluation_strategy="steps",
                                 eval_steps=params["eval_steps"],
@@ -75,17 +80,19 @@ training_args = TrainingArguments(checkpoint_path,
                                 logging_steps=params["logging_steps"]
                                 )
 
-
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=tokenized_train_dataset,
-    eval_dataset=tokenized_eval_dataset,
+    train_dataset=tokenized_datasets["train"],
+    eval_dataset=tokenized_datasets["test"],
     tokenizer=tokenizer,
     data_collator=data_collator,
 )
 
-
 # TRAIN!
 train_result = trainer.train()
-train_metrics = train_result
+
+# Save the final model
+trainer.save_model(final_model_path)
+
+train_metrics = train_result.metrics
