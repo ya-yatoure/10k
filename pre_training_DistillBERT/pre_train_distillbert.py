@@ -35,9 +35,8 @@ df = df[['text']]
 
 # Transform into Dataset class and split into train/test
 full_dataset = Dataset.from_pandas(df)
-test_frac = params["test_frac"]
-seed = params["seed"]
-full_dataset = full_dataset.train_test_split(test_size=test_frac, seed=seed)
+test_frac = 0.2
+full_dataset = full_dataset.train_test_split(test_size=test_frac)
 
 # Tokenize text
 model_name = params["model_name"]
