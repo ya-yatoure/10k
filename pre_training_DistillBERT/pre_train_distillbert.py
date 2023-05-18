@@ -35,11 +35,11 @@ for dir_path in [output_path, checkpoint_path, final_model_path]:
         print(f"Directory {full_path} already exists")
 
 # open YAML file with parameters for pretraining
-stream = open("pre_training_DistillBERT/distilbert_params.yaml", 'r')
+stream = open("distilbert_params.yaml", 'r')
 params = yaml.load(stream, Loader=yaml.Loader)
 
 # Load the data
-df = pd.read_csv("pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 df = df[['text']]
 
 # Transform into Dataset class
