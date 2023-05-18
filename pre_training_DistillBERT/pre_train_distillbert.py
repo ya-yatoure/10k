@@ -70,12 +70,11 @@ training_args = TrainingArguments(checkpoint_path,
                                 logging_steps=params["logging_steps"]
                                 )
 
-# Define a progress callback class
 class ProgressCallback(TrainerCallback):
     "A callback that shows the progress of training."
-    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl):
         if state.is_local_process_zero:
-            print(f"Progress: {state.epoch}/{state.max_epoch} | {state.global_step}/{state.max_steps}")
+            print(f"Current Progress - Epoch: {state.epoch}, Step: {state.global_step}")
 
 
 # Initialize our Trainer
