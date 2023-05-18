@@ -1,13 +1,12 @@
 import os
 import pandas as pd
-from transformers import DistilBertTokenizer, DistilBertForMaskedLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer, TrainerCallback, TrainerState, TrainerControl
+from transformers import DistilBertTokenizer, DistilBertForMaskedLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer
 import yaml
 from datasets import Dataset
 import torch
 
 # You are already in the "10k" directory
 os.chdir("pre_training_DistillBERT")
-
 
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
@@ -42,7 +41,7 @@ tokenizer = DistilBertTokenizer.from_pretrained(model_name)
 model = DistilBertForMaskedLM.from_pretrained(model_name)
 
 # Tokenization
-max_sent_size = params["max_sent_size"] 
+max_sent_size = params["max_sent_size"]
 tokenized_datasets = raw_datasets.map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
 
 # Prepare Masking
@@ -70,7 +69,6 @@ training_args = TrainingArguments(checkpoint_path,
                                 logging_steps=params["logging_steps"]
                                 )
 
-
 # Initialize our Trainer
 trainer = Trainer(
     model=model,
@@ -78,7 +76,6 @@ trainer = Trainer(
     train_dataset=tokenized_datasets,
     tokenizer=tokenizer,
     data_collator=data_collator,
-    callbacks=[ProgressCallback()],  # Add the progress callback
 )
 
 # TRAIN!
