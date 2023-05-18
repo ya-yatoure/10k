@@ -1,10 +1,9 @@
 import os
 import pandas as pd
-from transformers import DistilBertTokenizer, DistilBertForMaskedLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer
+from transformers import DistilBertTokenizer, DistilBertForMaskedLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer, TrainerCallback, TrainerState, TrainerControl
 import yaml
 from datasets import Dataset
 import torch
-import time
 
 # Get the current directory path
 current_directory = os.getcwd()
@@ -12,14 +11,8 @@ current_directory = os.getcwd()
 # Set the working directory
 os.chdir(os.path.join(current_directory, "10k/pre_training_DistillBERT"))
 
-# Rest of your code here...
-
-
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
-
-data_path = "data/"
-hand_path = "./"
 
 output_path = "pre_training_DistillBERT/"
 checkpoint_path = "pre_training_DistillBERT/checkpoints/"
@@ -79,10 +72,13 @@ training_args = TrainingArguments(checkpoint_path,
                                 logging_steps=params["logging_steps"]
                                 )
 
-# Define a progress callback function
-def progress_callback(info, state):
-    if state.is_local_process_zero:
-        print(f"Progress: {info.epoch}/{info.num_epochs} | {info.step}/{info.num_steps}")
+# Define a progress callback class
+class ProgressCallback(TrainerCallback):
+    "A callback that shows the progress of training."
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        if state.is_local_process_zero:
+            print(f"Progress: {state.epoch}/{state.max_epoch} | {state.global_step}/{state.max_steps}")
+
 
 # Initialize our Trainer
 trainer = Trainer(
@@ -91,12 +87,9 @@ trainer = Trainer(
     train_dataset=tokenized_datasets,
     tokenizer=tokenizer,
     data_collator=data_collator,
-    callbacks=[progress_callback],  # Add the progress callback
+    callbacks=[ProgressCallback()],  # Add the progress callback
 )
 
 # TRAIN!
 train_result = trainer.train()
-train_metrics = train_result.metrics
-
-# save final model
-trainer.save_model(final_model_path)
+train_metrics = train_result
