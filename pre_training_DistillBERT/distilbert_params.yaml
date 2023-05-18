@@ -6,5 +6,5 @@ max_sent_size: 512
 mlm_probability: 0.15
 model_name: distilbert-base-uncased
 pad_to_multiple_of_8: true
-steps: 5000
+steps: 500
 warmup_ratio: 0.1
