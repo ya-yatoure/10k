@@ -6,10 +6,13 @@ from datasets import Dataset
 import torch
 import time
 
+# Set the working directory
+os.chdir("/10k/pre_training_DistillBERT/")
+
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
 
-data_path = "../data/"
+data_path = "data/"
 hand_path = "./"
 
 output_path = "pre_training_DistillBERT/"
@@ -18,11 +21,12 @@ final_model_path = "pre_training_DistillBERT/final/"
 
 # check if the output directories exist and, if not, create them
 for dir_path in [output_path, checkpoint_path, final_model_path]:
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-        print(f"Directory {dir_path} created successfully")
+    full_path = os.path.join(os.getcwd(), dir_path)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+        print(f"Directory {full_path} created successfully")
     else:
-        print(f"Directory {dir_path} already exists")
+        print(f"Directory {full_path} already exists")
 
 # open YAML file with parameters for pretraining
 stream = open("pre_training_DistillBERT/distilbert_params.yaml", 'r')
