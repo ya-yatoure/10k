@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from transformers import DistilBertTokenizer, DistilBertForMaskedLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer
 import yaml
 from datasets import Dataset
@@ -32,8 +33,12 @@ params = yaml.load(stream, Loader=yaml.Loader)
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 df = df[['text']]
 
+# Split the data into training and eval set
+train_df, eval_df = train_test_split(df, test_size=0.2)
+
 # Transform into Dataset class
-raw_datasets = Dataset.from_pandas(df)
+train_dataset = Dataset.from_pandas(train_df)
+eval_dataset = Dataset.from_pandas(eval_df)
 
 # Tokenize text
 model_name = params["model_name"]
@@ -42,7 +47,8 @@ model = DistilBertForMaskedLM.from_pretrained(model_name)
 
 # Tokenization
 max_sent_size = params["max_sent_size"]
-tokenized_datasets = raw_datasets.map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
+tokenized_train_dataset = train_dataset.map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
+tokenized_eval_dataset = eval_dataset.map(lambda examples: tokenizer(examples['text'], truncation=True, max_length=max_sent_size, padding='max_length'), batched=True)
 
 # Prepare Masking
 data_collator = DataCollatorForLanguageModeling(
@@ -68,6 +74,7 @@ training_args = TrainingArguments(checkpoint_path,
                                 logging_strategy="steps",
                                 logging_steps=params["logging_steps"]
                                 )
+
 
 # Initialize our Trainer
 trainer = Trainer(
