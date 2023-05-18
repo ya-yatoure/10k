@@ -6,8 +6,14 @@ from datasets import Dataset
 import torch
 import time
 
+# Get the current directory path
+current_directory = os.getcwd()
+
 # Set the working directory
-os.chdir("/10k/pre_training_DistillBERT/")
+os.chdir(os.path.join(current_directory, "10k/pre_training_DistillBERT"))
+
+# Rest of your code here...
+
 
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
