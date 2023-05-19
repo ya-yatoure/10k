@@ -1,10 +1,10 @@
 batch_size: 16
 eval_steps: 50
 learning_rate: 5.0e-05
-logging_steps: 100
+logging_steps: 50
 max_sent_size: 512
 mlm_probability: 0.15
 model_name: distilbert-base-uncased
 pad_to_multiple_of_8: true
-steps: 500
+steps: 1000
 warmup_ratio: 0.1
