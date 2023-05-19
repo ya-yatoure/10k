@@ -6,7 +6,6 @@ from datasets import Dataset
 import torch
 
 # You are already in the "10k" directory
-os.chdir("pre_training_DistillBERT")
 
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
