@@ -11,9 +11,9 @@ os.chdir("pre_training_DistillBERT")
 print(f"GPU: {torch.cuda.is_available()}")
 print(f"Number of GPUs: {torch.cuda.device_count()}")
 
-output_path = "pre_training_DistillBERT/"
-checkpoint_path = "pre_training_DistillBERT/checkpoints/"
-final_model_path = "pre_training_DistillBERT/final/"
+output_path = "./"
+checkpoint_path = "./checkpoints/"
+final_model_path = "./final/"
 
 # check if the output directories exist and, if not, create them
 for dir_path in [output_path, checkpoint_path, final_model_path]:
