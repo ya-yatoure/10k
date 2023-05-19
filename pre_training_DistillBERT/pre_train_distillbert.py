@@ -35,7 +35,7 @@ df = df[['text']]
 
 # Transform into Dataset class and split into train/test
 full_dataset = Dataset.from_pandas(df)
-test_frac = 0.2
+test_frac = 0.1
 full_dataset = full_dataset.train_test_split(test_size=test_frac)
 
 # Tokenize text
