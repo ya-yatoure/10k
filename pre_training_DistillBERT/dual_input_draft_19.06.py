@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 
-pd.read_csv("2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
 # random sub sample of  rows
 df_sample = df.sample(n=1600)
