@@ -170,7 +170,6 @@ for epoch in range(epochs):
 
 
 # Generate predictions after all epochs
-# Generate predictions after all epochs
 model.eval()
 
 # Dictionary to store company ids and their respective predictions
