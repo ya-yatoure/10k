@@ -50,9 +50,14 @@ test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
 
 
 train_data = TensorDataset(train_input_ids, train_attention_mask, train_structured_data, train_target)
-test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target, torch.tensor(test_df['cik'].values))  # including cik for grouping later
+test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target)
+
+# Maintain a separate list of 'cik' values
+test_cik = test_df['cik'].values.tolist()
+
 train_dataloader = DataLoader(train_data, batch_size=16)
 test_dataloader = DataLoader(test_data, batch_size=16)
+
 
 
 # split train_data into training set and validation set
@@ -166,13 +171,14 @@ company_predictions = {}
 actuals = []
 
 with torch.no_grad():
-    for batch in test_dataloader:
-        test_inputs, test_masks, test_structured, targets, company_ids = (t.to(device) for t in batch)
+    for i, batch in enumerate(test_dataloader):
+        test_inputs, test_masks, test_structured, targets = (t.to(device) for t in batch)
+        company_ids = test_cik[i * batch_size: (i + 1) * batch_size]  # Adjust indices based on batch size
         outputs = model(test_inputs, test_masks, test_structured)
         outputs = outputs.cpu().detach().numpy()
 
         # Group predictions by company id and take the average
-        for comp_id, pred, actual in zip(company_ids.cpu().numpy(), outputs, targets.cpu().numpy()):
+        for comp_id, pred, actual in zip(company_ids, outputs, targets.cpu().numpy()):
             if comp_id in company_predictions:
                 company_predictions[comp_id].append(pred)
             else:
