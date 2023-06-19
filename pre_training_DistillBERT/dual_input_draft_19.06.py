@@ -15,6 +15,11 @@ from sklearn.metrics import r2_score
 
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
+dataset_fraction = 0.1  
+
+# Sample dataset_fraction of the data
+df = df.sample(frac=dataset_fraction)
+
 # group by companies when test/train splitting so we dont have companies that appear in test and trainset
 unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
