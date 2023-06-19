@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 
-df = pd.read_csv("/Users/benjaminhaussmann/Documents/GitHub/10k/pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
 # group by companies when test/train splitting so we dont have companies that appear in test and trainset
 unique_companies = df['cik'].unique()
