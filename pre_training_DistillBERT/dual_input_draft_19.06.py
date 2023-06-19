@@ -72,7 +72,7 @@ class DualInputModel(nn.Module):
         combined_dim = text_embedding_dim + 6
         
         # layers after combination
-        self.combined_layers = nn.Sequential(
+        self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
             nn.ReLU(),
             nn.Linear(64, 32),
