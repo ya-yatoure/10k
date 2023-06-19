@@ -70,13 +70,18 @@ class DualInputModel(nn.Module):
         )
 
         combined_dim = text_embedding_dim + 6
-
-        # Linear combination layer
-        self.combined_layer = nn.Sequential(
-            nn.Linear(combined_dim, 256),
+        
+        # layers after combination
+        self.combined_layers = nn.Sequential(
+            nn.Linear(combined_dim, 64),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1)
         )
+
 
     def forward(self, input_ids, attention_mask, structured_data):
         # Pass the text data through DistilBERT
