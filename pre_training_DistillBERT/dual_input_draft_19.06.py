@@ -17,7 +17,7 @@ from sklearn.metrics import r2_score
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
 # random sub sample of  rows
-df_sample = df.sample(n=1600)
+df_sample = df.sample(n=64000)
 
 # Initialize  tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
