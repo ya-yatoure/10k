@@ -1,4 +1,3 @@
-
 from transformers import DistilBertModel, DistilBertTokenizer, DistilBertTokenizerFast
 from torch import nn
 
@@ -14,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 
-df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("/Users/benjaminhaussmann/Documents/GitHub/10k/pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
 
 # group by companies when test/train splitting so we dont have companies that appear in test and trainset
 unique_companies = df['cik'].unique()
@@ -40,12 +39,15 @@ train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=Tru
 train_input_ids = torch.tensor(train_encodings['input_ids'])
 train_attention_mask = torch.tensor(train_encodings['attention_mask'])
 train_structured_data = scaler.fit_transform(train_df[['lev', 'logEMV', 'naics2']])
+train_structured_data = torch.tensor(train_structured_data, dtype=torch.float)
 train_target = torch.tensor(train_df['ER_1'].values, dtype=torch.float)
 
 test_encodings = tokenizer(list(test_df['text']), truncation=True, padding=True)
 test_input_ids = torch.tensor(test_encodings['input_ids'])
 test_attention_mask = torch.tensor(test_encodings['attention_mask'])
 test_structured_data = scaler.transform(test_df[['lev', 'logEMV', 'naics2']])
+test_structured_data = torch.tensor(test_structured_data, dtype=torch.float)
+
 test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
 
 
@@ -201,4 +203,3 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss per observation')
 plt.legend()
 plt.show()
-
