@@ -17,11 +17,11 @@ from sklearn.metrics import r2_score
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
 # group by companies when test/train splitting so we dont have companies that appear in test and trainset
-unique_companies = df['company_id'].unique()
+unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
 
-train_df = df[df['company_id'].isin(train_companies)]
-test_df = df[df['company_id'].isin(test_companies)]
+train_df = df[df['cik'].isin(train_companies)]
+test_df = df[df['cik'].isin(test_companies)]
 
 
 # Initialize  tokenizer and scaler
@@ -50,7 +50,7 @@ test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
 
 
 train_data = TensorDataset(train_input_ids, train_attention_mask, train_structured_data, train_target)
-test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target, torch.tensor(test_df['company_id'].values))  # including company_id for grouping later
+test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target, torch.tensor(test_df['cik'].values))  # including cik for grouping later
 train_dataloader = DataLoader(train_data, batch_size=16)
 test_dataloader = DataLoader(test_data, batch_size=16)
 
