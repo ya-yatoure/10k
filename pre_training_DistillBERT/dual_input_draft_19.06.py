@@ -15,7 +15,7 @@ from sklearn.metrics import r2_score
 
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
-dataset_fraction = 0.1  
+dataset_fraction = 0.2  
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
@@ -138,7 +138,7 @@ model = DualInputModel(num_structured_features=3, text_embedding_dim=768).to(dev
 optimizer = optim.Adam(model.parameters())
 loss_fn = nn.MSELoss()
 
-epochs = 10
+epochs = 20
 batch_size = 16
 train_losses, val_losses = [], []
 
