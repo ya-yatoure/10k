@@ -17,7 +17,7 @@ from sklearn.metrics import r2_score
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
 # random sub sample of  rows
-df_sample = df.sample(n=64000)
+df_sample = df.sample(n=6400)
 
 # Initialize  tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
@@ -72,7 +72,11 @@ class DualInputModel(nn.Module):
         combined_dim = text_embedding_dim + 6
 
         # Linear combination layer
-        self.combined_layer = nn.Linear(combined_dim, 1)
+        self.combined_layer = nn.Sequential(
+            nn.Linear(combined_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1)
+        )
 
     def forward(self, input_ids, attention_mask, structured_data):
         # Pass the text data through DistilBERT
