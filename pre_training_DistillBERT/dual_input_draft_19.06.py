@@ -64,12 +64,12 @@ class DualInputModel(nn.Module):
 
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
-            nn.Linear(num_structured_features, 16),
+            nn.Linear(num_structured_features, 6),
             nn.ReLU(),
-            nn.Linear(16, 8)
+            nn.Linear(6, 6)
         )
 
-        combined_dim = text_embedding_dim + 8
+        combined_dim = text_embedding_dim + 6
 
         # Linear combination layer
         self.combined_layer = nn.Linear(combined_dim, 1)
