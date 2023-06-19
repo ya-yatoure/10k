@@ -160,19 +160,34 @@ for epoch in range(epochs):
 # Generate predictions after all epochs
 # Generate predictions after all epochs
 model.eval()
-predictions, actuals = [], []
+
+# Dictionary to store company ids and their respective predictions
+company_predictions = {}
+actuals = []
+
 with torch.no_grad():
     for batch in test_dataloader:
         test_inputs, test_masks, test_structured, targets, company_ids = (t.to(device) for t in batch)
         outputs = model(test_inputs, test_masks, test_structured)
-        predictions.extend(outputs.cpu().detach().numpy())
-        actuals.extend(targets.cpu().detach().numpy())
-        
-predictions = np.array(predictions)
+        outputs = outputs.cpu().detach().numpy()
+
+        # Group predictions by company id and take the average
+        for comp_id, pred, actual in zip(company_ids.cpu().numpy(), outputs, targets.cpu().numpy()):
+            if comp_id in company_predictions:
+                company_predictions[comp_id].append(pred)
+            else:
+                company_predictions[comp_id] = [pred]
+                actuals.append(actual)  # Only need one actual value per company
+
+# Average the predictions for each company
+avg_company_predictions = {comp_id: np.mean(preds) for comp_id, preds in company_predictions.items()}
+
+# The 'avg_company_predictions' dictionary now holds the average prediction for each company
+predictions = np.array(list(avg_company_predictions.values()))
 actuals = np.array(actuals)
+
 r2 = r2_score(actuals, predictions)
 print(f"R^2 score: {r2}")
-
 
 plt.plot(train_losses, label='Training Loss per observation')
 plt.plot(val_losses, label='Validation Loss per observation')
@@ -180,3 +195,4 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss per observation')
 plt.legend()
 plt.show()
+
