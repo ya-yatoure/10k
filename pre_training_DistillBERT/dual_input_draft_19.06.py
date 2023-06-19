@@ -16,7 +16,21 @@ from sklearn.metrics import r2_score
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 scaler = StandardScaler()
 
-df = pd.read_csv("/Users/benjaminhaussmann/Documents/GitHub/10k/pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
+dataset_fraction = 0.2  # use 50% of the total data
+
+# Sample dataset_fraction of the data
+df = df.sample(frac=dataset_fraction)
+
+# Continue with  train/test split
+# group by companies when test/train splitting so we dont have companies that appear in test and trainset
+unique_companies = df['cik'].unique()
+train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
+
+train_df = df[df['cik'].isin(train_companies)]
+test_df = df[df['cik'].isin(test_companies)]
+
+
 
 # remove rows with lass than 4 words in the text column
 df = df[df['text'].str.split().str.len().gt(4)]
