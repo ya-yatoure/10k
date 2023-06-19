@@ -103,7 +103,7 @@ model = DualInputModel(num_structured_features=3, text_embedding_dim=768).to(dev
 optimizer = optim.Adam(model.parameters())
 loss_fn = nn.MSELoss()
 
-epochs = 50
+epochs = 10
 batch_size = 16
 train_losses, val_losses = [], []
 
