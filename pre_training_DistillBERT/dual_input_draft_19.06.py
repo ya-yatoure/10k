@@ -12,13 +12,14 @@ from torch.nn import DataParallel
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
+# Initialize  tokenizer and scaler
+tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
+scaler = StandardScaler()
 
-df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
+df = pd.read_csv("/Users/benjaminhaussmann/Documents/GitHub/10k/pre_training_DistillBERT/2019_10kdata_with_covars_sample.csv")
 
-dataset_fraction = 0.2  
-
-# Sample dataset_fraction of the data
-df = df.sample(frac=dataset_fraction)
+# remove rows with lass than 4 words in the text column
+df = df[df['text'].str.split().str.len().gt(4)]
 
 # group by companies when test/train splitting so we dont have companies that appear in test and trainset
 unique_companies = df['cik'].unique()
@@ -26,12 +27,6 @@ train_companies, test_companies = train_test_split(unique_companies, test_size=0
 
 train_df = df[df['cik'].isin(train_companies)]
 test_df = df[df['cik'].isin(test_companies)]
-
-
-# Initialize  tokenizer and scaler
-tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
-scaler = StandardScaler()
-
 encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
 
@@ -138,7 +133,7 @@ model = DualInputModel(num_structured_features=3, text_embedding_dim=768).to(dev
 optimizer = optim.Adam(model.parameters())
 loss_fn = nn.MSELoss()
 
-epochs = 20
+epochs = 10
 batch_size = 16
 train_losses, val_losses = [], []
 
@@ -169,6 +164,7 @@ for epoch in range(epochs):
         (train_losses if is_training else val_losses).append(avg_loss)
 
 
+# Generate predictions after all epochs
 # Generate predictions after all epochs
 model.eval()
 
