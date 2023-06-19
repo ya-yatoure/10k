@@ -16,38 +16,56 @@ from sklearn.metrics import r2_score
 
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
 
-# random sub sample of  rows
-df_sample = df.sample(n=6400)
+# group by companies when test/train splitting so we dont have companies that appear in test and trainset
+unique_companies = df['company_id'].unique()
+train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
 
-# Initialize  tokenizer
+train_df = df[df['company_id'].isin(train_companies)]
+test_df = df[df['company_id'].isin(test_companies)]
+
+
+# Initialize  tokenizer and scaler
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
-
-# Tokenize the text data
-encodings = tokenizer(list(df_sample['text']), truncation=True, padding=True)
-
-# Get the input IDs and attention masks as PyTorch tensors
-input_ids = torch.tensor(encodings['input_ids'])
-attention_mask = torch.tensor(encodings['attention_mask'])
-
 scaler = StandardScaler()
-structured_data = scaler.fit_transform(df_sample[['lev', 'logEMV', 'naics2']])
 
-# Convert the structured data to a PyTorch tensor
-structured_data = torch.tensor(structured_data, dtype=torch.float)
+encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
-# Get the abnormal returns variable as a PyTorch tensor
-target = torch.tensor(df_sample['ER_1'].values, dtype=torch.float)
 
-train_inputs, val_inputs, train_masks, val_masks, train_structured, val_structured, train_target, val_target = train_test_split(
-    input_ids, attention_mask, structured_data, target, test_size=0.2)
+# For Train and Test set:
+# input IDs and attention masks as PyTorch tensors
+# structured data to a PyTorch tensor
+# abnormal returns variable as a PyTorch tensor
 
-# Create TensorDatasets for the training and validation sets
-train_data = TensorDataset(train_inputs, train_masks, train_structured, train_target)
-val_data = TensorDataset(val_inputs, val_masks, val_structured, val_target)
+train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=True)
+train_input_ids = torch.tensor(train_encodings['input_ids'])
+train_attention_mask = torch.tensor(train_encodings['attention_mask'])
+train_structured_data = scaler.fit_transform(train_df[['lev', 'logEMV', 'naics2']])
+train_target = torch.tensor(train_df['ER_1'].values, dtype=torch.float)
 
-# Create DataLoaders for the training and validation sets
+test_encodings = tokenizer(list(test_df['text']), truncation=True, padding=True)
+test_input_ids = torch.tensor(test_encodings['input_ids'])
+test_attention_mask = torch.tensor(test_encodings['attention_mask'])
+test_structured_data = scaler.transform(test_df[['lev', 'logEMV', 'naics2']])
+test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
+
+
+train_data = TensorDataset(train_input_ids, train_attention_mask, train_structured_data, train_target)
+test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target, torch.tensor(test_df['company_id'].values))  # including company_id for grouping later
 train_dataloader = DataLoader(train_data, batch_size=16)
+test_dataloader = DataLoader(test_data, batch_size=16)
+
+
+# split train_data into training set and validation set
+train_size = int(0.8 * len(train_data))  # 80% for training
+val_size = len(train_data) - train_size  # the rest for validation
+train_data, val_data = torch.utils.data.random_split(train_data, [train_size, val_size])
+
+# DataLoaders for training and validation sets
+train_dataloader = DataLoader(train_data, batch_size=16, shuffle=True)
 val_dataloader = DataLoader(val_data, batch_size=16)
+
+
+
 class DualInputModel(nn.Module):
     def __init__(self, num_structured_features, text_embedding_dim):
         super(DualInputModel, self).__init__()
@@ -113,7 +131,8 @@ batch_size = 16
 train_losses, val_losses = [], []
 
 for epoch in range(epochs):
-    for dataloader, is_training in [(train_dataloader, True), (val_dataloader, False)]:
+    for dataloader, is_training in [(train_dataloader, True), (test_dataloader, False)]:
+        
         total_loss = total_samples = 0
 
         model.train(is_training)
@@ -139,14 +158,21 @@ for epoch in range(epochs):
 
 
 # Generate predictions after all epochs
+# Generate predictions after all epochs
 model.eval()
+predictions, actuals = [], []
 with torch.no_grad():
-    pred = model(val_inputs.to(device), val_masks.to(device), val_structured.to(device))
-pred = pred.cpu().numpy().flatten()
+    for batch in test_dataloader:
+        test_inputs, test_masks, test_structured, targets, company_ids = (t.to(device) for t in batch)
+        outputs = model(test_inputs, test_masks, test_structured)
+        predictions.extend(outputs.cpu().detach().numpy())
+        actuals.extend(targets.cpu().detach().numpy())
+        
+predictions = np.array(predictions)
+actuals = np.array(actuals)
+r2 = r2_score(actuals, predictions)
+print(f"R^2 score: {r2}")
 
-# Calculate R-squared
-r2 = r2_score(val_target.numpy(), pred)
-print('R-squared: ', r2)
 
 plt.plot(train_losses, label='Training Loss per observation')
 plt.plot(val_losses, label='Validation Loss per observation')
