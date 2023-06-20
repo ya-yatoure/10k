@@ -140,6 +140,9 @@ class DualInputModel(nn.Module):
 # Check if CUDA is available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# Define the model
+model = DualInputModel(num_structured_features=3, text_embedding_dim=768).to(device)
+
 # Separately get the parameters of the DistilBERT model and the rest of your model
 distilbert_params = model.distilbert.parameters()
 other_params = [p for p in model.parameters() if p not in distilbert_params]
