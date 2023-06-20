@@ -17,7 +17,7 @@ tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 scaler = StandardScaler()
 
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
-dataset_fraction = 0.4  # use 50% of the total data
+dataset_fraction = 0.8  # use 50% of the total data
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
@@ -155,16 +155,19 @@ optimizer = optim.Adam([
 
 loss_fn = nn.MSELoss()
 
-epochs = 10
+epochs = 30
 batch_size = 16
 train_losses, val_losses = [], []
 
-for epoch in range(epochs):
-    for dataloader, is_training in [(train_dataloader, True), (test_dataloader, False)]:
-        
-        total_loss = total_samples = 0
+# initialize these for early stopping
+best_val_loss = float('inf')
+no_improve_epochs = 0
 
+for epoch in range(epochs):
+    for dataloader, is_training in [(train_dataloader, True), (val_dataloader, False)]:
+        total_loss = total_samples = 0
         model.train(is_training)
+
         for batch in dataloader:
             *inputs, targets = (t.to(device) for t in batch)
             targets = targets.unsqueeze(1)
@@ -184,9 +187,22 @@ for epoch in range(epochs):
         avg_loss = total_loss / total_samples
         print(f"{'Train' if is_training else 'Validation'} loss per observation {avg_loss}")
         (train_losses if is_training else val_losses).append(avg_loss)
+        
+        # Early stopping
+        if not is_training:  # we are in validation
+            if avg_loss < best_val_loss:
+                best_val_loss = avg_loss
+                no_improve_epochs = 0
+            else:
+                no_improve_epochs += 1
+            if no_improve_epochs >= 3: 
+                print("Early stopping as no improvement in validation loss for 3 consecutive epochs.")
+                break
+    if no_improve_epochs >= 3:
+        break  # break out from epoch loop as well
 
 
-# Generate predictions after all epochs
+
 # Generate predictions after all epochs
 model.eval()
 
