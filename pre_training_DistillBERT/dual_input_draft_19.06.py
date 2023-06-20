@@ -17,7 +17,7 @@ tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 scaler = StandardScaler()
 
 df = pd.read_csv("2019_10kdata_with_covars_sample.csv")
-dataset_fraction = 0.2  # use 50% of the total data
+dataset_fraction = 0.4  # use 50% of the total data
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
@@ -90,16 +90,13 @@ val_dataloader = DataLoader(val_data, batch_size=16)
 class DualInputModel(nn.Module):
     def __init__(self, num_structured_features, text_embedding_dim):
         super(DualInputModel, self).__init__()
-
-
-        #FREEZE DISTILBERT
+        
+        # DistilBERT model for the text data (unfrozen)
         self.distilbert = DistilBertModel.from_pretrained('distilbert-base-uncased')
-
-        for param in self.distilbert.parameters():
-            param.requires_grad = False
-
-        # Unfrozen # The DistilBERT model for the text data
-        #self.distilbert = DistilBertModel.from_pretrained('distilbert-base-uncased')
+        
+        #FREEZE DISTILBERT
+        #for param in self.distilbert.parameters():
+            #param.requires_grad = False
 
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
@@ -143,8 +140,16 @@ class DualInputModel(nn.Module):
 # Check if CUDA is available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = DualInputModel(num_structured_features=3, text_embedding_dim=768).to(device)
-optimizer = optim.Adam(model.parameters())
+# Separately get the parameters of the DistilBERT model and the rest of your model
+distilbert_params = model.distilbert.parameters()
+other_params = [p for p in model.parameters() if p not in distilbert_params]
+
+# Use a smaller learning rate for the DistilBERT parameters
+optimizer = optim.Adam([
+    {'params': distilbert_params, 'lr': 1e-5},
+    {'params': other_params, 'lr': 1e-3}
+])
+
 loss_fn = nn.MSELoss()
 
 epochs = 10
