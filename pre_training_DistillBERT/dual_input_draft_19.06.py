@@ -149,8 +149,8 @@ other_params = [p for p in model.parameters() if p not in distilbert_params]
 
 # Use a smaller learning rate for the DistilBERT parameters
 optimizer = optim.Adam([
-    {'params': distilbert_params, 'lr': 1e-5},
-    {'params': other_params, 'lr': 1e-3}
+    {'params': distilbert_params, 'lr': 1e-4},
+    {'params': other_params, 'lr': 1e-2}
 ])
 
 loss_fn = nn.MSELoss()
