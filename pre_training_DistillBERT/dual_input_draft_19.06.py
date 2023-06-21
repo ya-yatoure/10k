@@ -16,7 +16,7 @@ from sklearn.metrics import r2_score
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 scaler = StandardScaler()
 
-df = pd.read_csv("text_covars_to512_2019_sample.csv")
+df = pd.read_csv("text_covars_to512_2019_sample_90mb.csv")
 dataset_fraction = 0.8  # use 50% of the total data
 
 # Sample dataset_fraction of the data
