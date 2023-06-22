@@ -111,11 +111,7 @@ class DualInputModel(nn.Module):
         self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1)
+            nn.Linear(64, 1)
         )
 
 
