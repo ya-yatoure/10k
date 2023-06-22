@@ -194,10 +194,10 @@ for epoch in range(epochs):
                 no_improve_epochs = 0
             else:
                 no_improve_epochs += 1
-            if no_improve_epochs >= 5: 
-                print("Early stopping as no improvement in validation loss for 3 consecutive epochs.")
+            if no_improve_epochs >= 10: 
+                print("Early stopping as no improvement in validation loss for 10 consecutive epochs.")
                 break
-    if no_improve_epochs >= 5:
+    if no_improve_epochs >= 10:
         break  # break out from epoch loop as well
 
 
