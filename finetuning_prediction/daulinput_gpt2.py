@@ -19,7 +19,7 @@ tokenizer.pad_token = tokenizer.eos_token
 
 scaler = StandardScaler()
 
-df = pd.read_csv("./Data/text_covars_to512_2019_sample_90mb.csv")
+df = pd.read_csv("./Data/text_covars_to1024_2019_sample.csv")
 dataset_fraction = 0.2  # use frac of data
 
 # Sample dataset_fraction of the data
@@ -198,10 +198,10 @@ for epoch in range(epochs):
                 no_improve_epochs = 0
             else:
                 no_improve_epochs += 1
-            if no_improve_epochs >= 3: 
+            if no_improve_epochs >= 5: 
                 print("Early stopping as no improvement in validation loss for 3 consecutive epochs.")
                 break
-    if no_improve_epochs >= 3:
+    if no_improve_epochs >= 5:
         break  # break out from epoch loop as well
 
 
