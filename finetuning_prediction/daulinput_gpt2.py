@@ -20,7 +20,7 @@ tokenizer.pad_token = tokenizer.eos_token
 scaler = StandardScaler()
 
 df = pd.read_csv("../Data/text_covars_to1024_2019_sample.csv")
-dataset_fraction = 0.2  # use frac of data
+dataset_fraction = 1.0  # use frac of data
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
