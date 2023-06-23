@@ -86,17 +86,29 @@ train_dataloader = DataLoader(train_data, batch_size=16, shuffle=True)
 val_dataloader = DataLoader(val_data, batch_size=16)
 
 
+class Attention(nn.Module):
+    def __init__(self, hidden_dim):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.attention = nn.Linear(hidden_dim, 1)
 
+    def forward(self, encoder_outputs):
+        energy = self.attention(encoder_outputs)
+        attention = torch.softmax(energy, dim=1)
+        context = torch.sum(attention * encoder_outputs, dim=1)
+        return context
+
+
+# DEFINE MODEL ARCHISTECTURE
 class DualInputModel(nn.Module):
     def __init__(self, num_structured_features, text_embedding_dim):
         super(DualInputModel, self).__init__()
-        
+
         # DistilBERT model for the text data (unfrozen)
         self.distilbert = DistilBertModel.from_pretrained('distilbert-base-uncased')
-        
-        #FREEZE DISTILBERT
-        #for param in self.distilbert.parameters():
-            #param.requires_grad = False
+
+        # The global attention mechanism
+        self.attention = Attention(text_embedding_dim)
 
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
@@ -106,7 +118,7 @@ class DualInputModel(nn.Module):
         )
 
         combined_dim = text_embedding_dim + 6
-        
+
         # layers after combination
         self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
@@ -114,11 +126,12 @@ class DualInputModel(nn.Module):
             nn.Linear(64, 1)
         )
 
-
     def forward(self, input_ids, attention_mask, structured_data):
         # Pass the text data through DistilBERT
         distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
-        text_embeddings = distilbert_output.last_hidden_state.mean(dim=1)  # Average the sequence dimension
+        
+        # Apply the global attention mechanism
+        text_embeddings = self.attention(distilbert_output.last_hidden_state)
 
         # Pass the structured data through the feed-forward neural network
         structured_embeddings = self.ffnn(structured_data)
@@ -130,6 +143,7 @@ class DualInputModel(nn.Module):
         output = self.combined_layer(combined)
 
         return output
+
 
 
 
