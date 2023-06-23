@@ -79,29 +79,73 @@ test_data = TensorDataset(test_input_ids, test_attention_mask, test_target)
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
+# Define Attention class
+class Attention(nn.Module):
+    def __init__(self, feature_dim, step_dim, bias=True, **kwargs):
+        super(Attention, self).__init__(**kwargs)
+        
+        self.supports_masking = True
+
+        self.bias = bias
+        self.feature_dim = feature_dim
+        self.step_dim = step_dim
+        self.features_dim = 0
+        
+        weight = torch.zeros(feature_dim, 1)
+        nn.init.xavier_uniform_(weight)
+        self.weight = nn.Parameter(weight)
+        
+        if bias:
+            self.b = nn.Parameter(torch.zeros(step_dim))
+        
+    def forward(self, x, mask=None):
+        feature_dim = self.feature_dim 
+        step_dim = self.step_dim
+
+        eij = torch.mm(
+            x.contiguous().view(-1, feature_dim), 
+            self.weight
+        ).view(-1, step_dim)
+        
+        if self.bias:
+            eij = eij + self.b
+            
+        eij = torch.tanh(eij)
+        a = torch.exp(eij)
+        
+        if mask is not None:
+            a = a * mask
+
+        a = a / torch.sum(a, 1, keepdim=True) + 1e-10
+
+        weighted_input = x * torch.unsqueeze(a, -1)
+        return torch.sum(weighted_input, 1)
+
+
+# Define DistilBERTRegressor class
 class DistilBERTRegressor(nn.Module):
     def __init__(self):
         super(DistilBERTRegressor, self).__init__()
         self.distilbert = DistilBertModel.from_pretrained("distilbert-base-uncased")
-        self.dropout = nn.Dropout(0.2)
         
-        # combined layers after getting embeddings from DistilBERT
-        self.combined_layer = nn.Sequential(
-            nn.Linear(self.distilbert.config.dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1)
-        )
+        # Introduce attention and dropout layers
+        self.attention = Attention(self.distilbert.config.dim, self.distilbert.config.max_position_embeddings)
+        self.dropout = nn.Dropout(0.5)
+        
+        self.linear = nn.Linear(self.distilbert.config.dim, 1)
 
     def forward(self, input_ids, attention_mask):
         # get embeddings from DistilBERT model
-        embeddings = self.distilbert(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
-        embeddings = self.dropout(embeddings)
+        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
 
-        # pool over sequence dimension
-        embeddings = embeddings.mean(dim=1)
+        # apply attention
+        attention_output = self.attention(distilbert_output)
+        
+        # apply dropout
+        dropout_output = self.dropout(attention_output)
 
-        # pass pooled embeddings through the combined layers
-        output = self.combined_layer(embeddings)
+        # pass through linear layer
+        output = self.linear(dropout_output)
         
         return output.squeeze(-1)
 
