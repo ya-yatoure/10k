@@ -110,21 +110,24 @@ class DualInputModel(nn.Module):
         # The global attention mechanism
         self.attention = Attention(text_embedding_dim)
 
+        # embeddings plus strctured featrue nnet output
+        combined_dim = text_embedding_dim + 6
+
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
             nn.Linear(num_structured_features, 6),
+            nn.Dropout(0.5),
             nn.ReLU(),
             nn.Linear(6, 6)
         )
 
-        combined_dim = text_embedding_dim + 6
-
-        # layers after combination
         self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
+            nn.Dropout(0.5),
             nn.ReLU(),
             nn.Linear(64, 1)
         )
+
 
     def forward(self, input_ids, attention_mask, structured_data):
         # Pass the text data through DistilBERT
@@ -159,9 +162,10 @@ other_params = [p for p in model.parameters() if p not in distilbert_params]
 
 # Use a smaller learning rate for the DistilBERT parameters
 optimizer = optim.Adam([
-    {'params': distilbert_params, 'lr': 1e-4},
-    {'params': other_params, 'lr': 1e-2}
+    {'params': distilbert_params, 'lr': 1e-4, 'weight_decay': 1e-5},
+    {'params': other_params, 'lr': 1e-2, 'weight_decay': 1e-5}
 ])
+
 
 loss_fn = nn.MSELoss()
 
