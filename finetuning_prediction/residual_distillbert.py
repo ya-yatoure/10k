@@ -48,7 +48,8 @@ test_df = df[df['cik'].isin(test_companies)]
 # For Train and Test set:
 # input IDs and attention masks as PyTorch tensors
 # structured data to a PyTorch tensor
-# abnormal returns variable as a PyTorch tensortrain_encodings = distilbert_tokenizer(list(train_df['text']), truncation=True, padding=True)
+# abnormal returns variable as a PyTorch tensor
+train_encodings = distilbert_tokenizer(list(train_df['text']), truncation=True, padding=True)
 train_input_ids = torch.tensor(train_encodings['input_ids'])
 train_attention_mask = torch.tensor(train_encodings['attention_mask'])
 train_target = torch.tensor(train_df['ER_1_residuals'].values, dtype=torch.float)
