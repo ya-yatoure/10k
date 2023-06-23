@@ -17,7 +17,7 @@ tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 scaler = StandardScaler()
 
 df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
-dataset_fraction = 0.2  # use 50% of the total data
+dataset_fraction = 0.6  # use 50% of the total data
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
