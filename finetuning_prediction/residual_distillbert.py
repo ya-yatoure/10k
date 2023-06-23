@@ -22,7 +22,7 @@ scaler = StandardScaler()
 # load data
 df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
 
-dataset_fraction = 0.3  # use frac of data
+dataset_fraction = 0.2  # use frac of data
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
