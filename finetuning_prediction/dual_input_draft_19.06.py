@@ -101,17 +101,17 @@ class Attention(nn.Module):
 
 # DEFINE MODEL ARCHISTECTURE
 class DualInputModel(nn.Module):
-    def __init__(self, num_structured_features, text_embedding_dim):
+    def __init__(self, num_structured_features, context_vector_dim):
         super(DualInputModel, self).__init__()
 
         # DistilBERT model for the text data (unfrozen)
         self.distilbert = DistilBertModel.from_pretrained('distilbert-base-uncased')
 
         # The global attention mechanism
-        self.attention = Attention(text_embedding_dim)
+        self.attention = Attention(context_vector_dim)
 
-        # embeddings plus strctured featrue nnet output
-        combined_dim = text_embedding_dim + 6
+        # context vector plus structured feature NN output
+        combined_dim = context_vector_dim + 6
 
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
@@ -128,26 +128,24 @@ class DualInputModel(nn.Module):
             nn.Linear(64, 1)
         )
 
-
     def forward(self, input_ids, attention_mask, structured_data):
         # Pass the text data through DistilBERT
         distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
         
         # Apply the global attention mechanism
-        text_embeddings = self.attention(distilbert_output.last_hidden_state)
+        context_vector = self.attention(distilbert_output.last_hidden_state)
 
         # Pass the structured data through the feed-forward neural network
         structured_embeddings = self.ffnn(structured_data)
 
-        # Concatenate the text embeddings and structured embeddings
-        combined = torch.cat((text_embeddings, structured_embeddings), dim=1)
+        # Concatenate the context vector and structured embeddings
+        combined = torch.cat((context_vector, structured_embeddings), dim=1)
 
-        # Pass the combined embeddings through the combined layer
+        # Pass the combined data through the combined layer
         output = self.combined_layer(combined)
 
         return output
-
-
+        
 
 
 # Check if CUDA is available, otherwise use CPU
