@@ -50,9 +50,9 @@ distilbert_tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-
 scaler = StandardScaler()
 
 # load data
-df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
+df = pd.read_csv("/Users/benjaminhaussmann/Desktop/Dissertation_Coding/2019_data/text_covars_to512_2019_sample.csv")
 
-dataset_fraction = 0.2  # use frac of data
+dataset_fraction = 0.01  # use frac of data
 
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
@@ -217,9 +217,11 @@ with torch.no_grad():
     predictions = np.array(predictions)
     actuals = np.array(actuals)
 
+    
     # Inverse transform predictions and actuals
-    predictions = scaler_target.inverse_transform(predictions)
-    actuals = scaler_target.inverse_transform(actuals)
+    predictions = scaler_target.inverse_transform(predictions.reshape(-1, 1))
+    actuals = scaler_target.inverse_transform(actuals.reshape(-1, 1))
+
 
     # Calculate R-squared score
     r2 = r2_score(actuals, predictions)
