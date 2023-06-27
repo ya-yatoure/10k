@@ -96,8 +96,8 @@ class DualInputModel(nn.Module):
 
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
-            nn.Linear(num_structured_features, 6),
-            nn.Dropout(0.5),
+            nn.Linear(num_structured_features, 12),
+            nn.Dropout(0.25),
             nn.ReLU(),
             nn.Linear(6, 6)
         )
