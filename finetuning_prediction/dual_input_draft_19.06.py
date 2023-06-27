@@ -146,8 +146,8 @@ other_params = [p for p in model.parameters() if p not in distilbert_params]
 
 # Use a smaller learning rate for the DistilBERT parameters
 optimizer = optim.Adam([
-    {'params': distilbert_params, 'lr': 1e-4, 'weight_decay': 1e-5},
-    {'params': other_params, 'lr': 1e-2, 'weight_decay': 1e-5}
+    {'params': distilbert_params, 'lr': 1e-5, 'weight_decay': 1e-5},
+    {'params': other_params, 'lr': 1e-3, 'weight_decay': 1e-5}
 ])
 
 
