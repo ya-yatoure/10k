@@ -22,15 +22,10 @@ dataset_fraction = 1.0  # use 50% of the total data
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
 
-# Continue with  train/test split
-# group by companies when test/train splitting so we dont have companies that appear in test and trainset
-unique_companies = df['cik'].unique()
-train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
+# one hot encoding 'naics2'
+df = pd.get_dummies(df, columns=['naics2'])
 
-train_df = df[df['cik'].isin(train_companies)]
-test_df = df[df['cik'].isin(test_companies)]
-
-# group by companies when test/train splitting so we dont have companies that appear in test and trainset
+# group by companies when test/train splitting so we don't have companies that appear in both test and train sets
 unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
 
@@ -38,48 +33,39 @@ train_df = df[df['cik'].isin(train_companies)]
 test_df = df[df['cik'].isin(test_companies)]
 encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
+# structured columns now include the one-hot-encoded 'naics2' columns as well
+structured_columns = ['lev', 'logEMV'] + [col for col in df.columns if 'naics2' in col]
 
-# For Train and Test set:
-# input IDs and attention masks as PyTorch tensors
-# structured data to a PyTorch tensor
-# abnormal returns variable as a PyTorch tensor
-
+# For Train and Test set
 train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=True)
 train_input_ids = torch.tensor(train_encodings['input_ids'])
 train_attention_mask = torch.tensor(train_encodings['attention_mask'])
-train_structured_data = scaler.fit_transform(train_df[['lev', 'logEMV', 'naics2']])
+train_structured_data = scaler.fit_transform(train_df[structured_columns])
 train_structured_data = torch.tensor(train_structured_data, dtype=torch.float)
 train_target = torch.tensor(train_df['ER_1'].values, dtype=torch.float)
 
 test_encodings = tokenizer(list(test_df['text']), truncation=True, padding=True)
 test_input_ids = torch.tensor(test_encodings['input_ids'])
 test_attention_mask = torch.tensor(test_encodings['attention_mask'])
-test_structured_data = scaler.transform(test_df[['lev', 'logEMV', 'naics2']])
+test_structured_data = scaler.transform(test_df[structured_columns])
 test_structured_data = torch.tensor(test_structured_data, dtype=torch.float)
-
 test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
-
 
 train_data = TensorDataset(train_input_ids, train_attention_mask, train_structured_data, train_target)
 test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target)
 
-# Maintain a separate list of 'cik' values
 test_cik = test_df['cik'].values.tolist()
 
-train_dataloader = DataLoader(train_data, batch_size=16)
+train_size = int(0.8 * len(train_data))
+val_size = len(train_data) - train_size
+train_data, val_data = torch.utils.data.random_split(train_data, [train_size, val_size])
+
+train_dataloader = DataLoader(train_data, batch_size=16, shuffle=True)
+val_dataloader = DataLoader(val_data, batch_size=16)
 test_dataloader = DataLoader(test_data, batch_size=16)
 
 
-
-# split train_data into training set and validation set
-train_size = int(0.8 * len(train_data))  # 80% for training
-val_size = len(train_data) - train_size  # the rest for validation
-train_data, val_data = torch.utils.data.random_split(train_data, [train_size, val_size])
-
-# DataLoaders for training and validation sets
-train_dataloader = DataLoader(train_data, batch_size=16, shuffle=True)
-val_dataloader = DataLoader(val_data, batch_size=16)
-
+# define attention and dual input model classes here...
 
 class Attention(nn.Module):
     def __init__(self, hidden_dim):
@@ -147,7 +133,8 @@ class DualInputModel(nn.Module):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Define the model
-model = DualInputModel(num_structured_features=3, text_embedding_dim=768).to(device)
+model = DualInputModel(num_structured_features=len(structured_columns), context_vector_dim=768).to(device)
+
 
 # Separately get the parameters of the DistilBERT model and the rest of your model
 distilbert_params = model.distilbert.parameters()
@@ -207,8 +194,6 @@ for epoch in range(epochs):
                 break
     if no_improve_epochs >= 5:
         break  # break out from epoch loop as well
-
-
 
 # Generate predictions after all epochs
 model.eval()
