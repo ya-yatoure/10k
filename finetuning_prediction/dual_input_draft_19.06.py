@@ -92,20 +92,20 @@ class DualInputModel(nn.Module):
         self.attention = Attention(context_vector_dim)
 
         # context vector plus structured feature NN output
-        combined_dim = context_vector_dim + 6
+        combined_dim = context_vector_dim + 8
 
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
-            nn.Linear(num_structured_features, 12),
+            nn.Linear(num_structured_features, 24),
             nn.Dropout(0.25),
             nn.ReLU(),
-            nn.Linear(12, 6)
+            nn.Linear(24, 8)
         )
 
 
         self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
-            nn.Dropout(0.5),
+            nn.Dropout(0.25),
             nn.ReLU(),
             nn.Linear(64, 1)
         )
