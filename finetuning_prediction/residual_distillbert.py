@@ -1,15 +1,15 @@
-from transformers import GPT2Model, GPT2TokenizerFast, DistilBertModel, DistilBertTokenizerFast
-from torch import nn
-from sklearn.linear_model import LinearRegression
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+
+from transformers import DistilBertModel, DistilBertTokenizerFast
+from torch import nn
 from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn import DataParallel
 
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
