@@ -30,11 +30,6 @@ train_companies, test_companies = train_test_split(unique_companies, test_size=0
 train_df = df[df['cik'].isin(train_companies)]
 test_df = df[df['cik'].isin(test_companies)]
 
-
-
-# remove rows with lass than 4 words in the text column
-df = df[df['text'].str.split().str.len().gt(4)]
-
 # group by companies when test/train splitting so we dont have companies that appear in test and trainset
 unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=0.2)
