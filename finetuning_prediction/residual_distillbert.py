@@ -130,7 +130,7 @@ optimizer = optim.Adam(model.parameters())
 n_epochs = 25  # adjust as needed
 
 # Initialize early stopping variables
-patience = 5
+patience = 10
 best_val_loss = float('inf')
 epochs_no_improve = 0
 
