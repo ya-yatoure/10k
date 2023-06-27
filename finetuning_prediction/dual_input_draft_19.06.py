@@ -97,14 +97,16 @@ class DualInputModel(nn.Module):
         # A feed-forward neural network for the structured data
         self.ffnn = nn.Sequential(
             nn.Linear(num_structured_features, 24),
+            nn.BatchNorm1d(24),  # Batch Normalization layer added here
             nn.Dropout(0.25),
             nn.ReLU(),
-            nn.Linear(24, 8)
+            nn.Linear(24, 8),
+            nn.BatchNorm1d(8)   # Batch Normalization layer added here
         )
-
 
         self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
+            nn.BatchNorm1d(64),  # Batch Normalization layer added here
             nn.Dropout(0.25),
             nn.ReLU(),
             nn.Linear(64, 1)
@@ -127,6 +129,7 @@ class DualInputModel(nn.Module):
         output = self.combined_layer(combined)
 
         return output
+
         
 
 
