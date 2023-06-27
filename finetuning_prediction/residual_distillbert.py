@@ -21,26 +21,26 @@ class DistilBERTRegressor(nn.Module):
     def __init__(self):
         super(DistilBERTRegressor, self).__init__()
         self.distilbert = DistilBertModel.from_pretrained("distilbert-base-uncased")
+        self.embedding_dim = self.distilbert.config.dim
 
-        # Drop attention and dropout layers
-        # self.attention = Attention(self.distilbert.config.dim, self.distilbert.config.max_position_embeddings)
-        # self.dropout = nn.Dropout(0.5)
-
-        # Linear layer remains the same
-        self.linear = nn.Linear(self.distilbert.config.dim, 1)
+        # Feed-forward neural network (FFNN)
+        self.ffnn = nn.Sequential(
+            nn.Linear(self.embedding_dim, 64),
+            nn.BatchNorm1d(64),
+            nn.Dropout(0.25),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, input_ids, attention_mask):
-        # get embeddings from DistilBERT model
+        # Get embeddings from DistilBERT model
         distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
 
         # Average out the embeddings instead of using attention
         avg_embeddings = torch.mean(distilbert_output, 1)
 
-        # Remove dropout
-        # dropout_output = self.dropout(attention_output)
-
-        # pass through linear layer
-        output = self.linear(avg_embeddings)
+        # Pass through the FFNN
+        output = self.ffnn(avg_embeddings)
 
         return output.squeeze(-1)
         
