@@ -13,7 +13,37 @@ from torch.nn import DataParallel
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import OneHotEncoder
 
+
+# Define DistilBERTRegressor class without attention
+class DistilBERTRegressor(nn.Module):
+    def __init__(self):
+        super(DistilBERTRegressor, self).__init__()
+        self.distilbert = DistilBertModel.from_pretrained("distilbert-base-uncased")
+
+        # Drop attention and dropout layers
+        # self.attention = Attention(self.distilbert.config.dim, self.distilbert.config.max_position_embeddings)
+        # self.dropout = nn.Dropout(0.5)
+
+        # Linear layer remains the same
+        self.linear = nn.Linear(self.distilbert.config.dim, 1)
+
+    def forward(self, input_ids, attention_mask):
+        # get embeddings from DistilBERT model
+        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+
+        # Average out the embeddings instead of using attention
+        avg_embeddings = torch.mean(distilbert_output, 1)
+
+        # Remove dropout
+        # dropout_output = self.dropout(attention_output)
+
+        # pass through linear layer
+        output = self.linear(avg_embeddings)
+
+        return output.squeeze(-1)
+        
 # Initialize DistilBERT tokenizer
 distilbert_tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
@@ -27,14 +57,20 @@ dataset_fraction = 0.2  # use frac of data
 # Sample dataset_fraction of the data
 df = df.sample(frac=dataset_fraction)
 
+# Convert 'naics2' to categorical
+encoder = OneHotEncoder()
+encoded_naics2 = encoder.fit_transform(df[['naics2']]).toarray()
 
-# Fit initial regression model
+# Fit initial regression model with encoded 'naics2'
 initial_regressor = LinearRegression()
-initial_regressor.fit(df[['lev', 'logEMV', 'naics2']], df['ER_1'])
+initial_regressor.fit(np.hstack((df[['lev', 'logEMV']].values, encoded_naics2)), df['ER_1'])
 
 # Get residuals
-df['ER_1_residuals'] = df['ER_1'] - initial_regressor.predict(df[['lev', 'logEMV', 'naics2']])
+df['ER_1_residuals'] = df['ER_1'] - initial_regressor.predict(np.hstack((df[['lev', 'logEMV']].values, encoded_naics2)))
 
+# Scale targets
+scaler_target = StandardScaler()
+df['ER_1_residuals'] = scaler_target.fit_transform(df[['ER_1_residuals']])
 
 # Group by companies when test/train splitting so we don't have companies that appear in test and trainset
 unique_companies = df['cik'].unique()
@@ -78,77 +114,6 @@ test_data = TensorDataset(test_input_ids, test_attention_mask, test_target)
 
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
-
-# Define Attention class
-class Attention(nn.Module):
-    def __init__(self, feature_dim, step_dim, bias=True, **kwargs):
-        super(Attention, self).__init__(**kwargs)
-        
-        self.supports_masking = True
-
-        self.bias = bias
-        self.feature_dim = feature_dim
-        self.step_dim = step_dim
-        self.features_dim = 0
-        
-        weight = torch.zeros(feature_dim, 1)
-        nn.init.xavier_uniform_(weight)
-        self.weight = nn.Parameter(weight)
-        
-        if bias:
-            self.b = nn.Parameter(torch.zeros(step_dim))
-        
-    def forward(self, x, mask=None):
-        feature_dim = self.feature_dim 
-        step_dim = self.step_dim
-
-        eij = torch.mm(
-            x.contiguous().view(-1, feature_dim), 
-            self.weight
-        ).view(-1, step_dim)
-        
-        if self.bias:
-            eij = eij + self.b
-            
-        eij = torch.tanh(eij)
-        a = torch.exp(eij)
-        
-        if mask is not None:
-            a = a * mask
-
-        a = a / torch.sum(a, 1, keepdim=True) + 1e-10
-
-        weighted_input = x * torch.unsqueeze(a, -1)
-        return torch.sum(weighted_input, 1)
-
-
-# Define DistilBERTRegressor class
-class DistilBERTRegressor(nn.Module):
-    def __init__(self):
-        super(DistilBERTRegressor, self).__init__()
-        self.distilbert = DistilBertModel.from_pretrained("distilbert-base-uncased")
-        
-        # Introduce attention and dropout layers
-        self.attention = Attention(self.distilbert.config.dim, self.distilbert.config.max_position_embeddings)
-        self.dropout = nn.Dropout(0.5)
-        
-        self.linear = nn.Linear(self.distilbert.config.dim, 1)
-
-    def forward(self, input_ids, attention_mask):
-        # get embeddings from DistilBERT model
-        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
-
-        # apply attention
-        attention_output = self.attention(distilbert_output)
-        
-        # apply dropout
-        dropout_output = self.dropout(attention_output)
-
-        # pass through linear layer
-        output = self.linear(dropout_output)
-        
-        return output.squeeze(-1)
-
 
 
 model = DistilBERTRegressor()
@@ -251,6 +216,10 @@ with torch.no_grad():
 
     predictions = np.array(predictions)
     actuals = np.array(actuals)
+
+    # Inverse transform predictions and actuals
+    predictions = scaler_target.inverse_transform(predictions)
+    actuals = scaler_target.inverse_transform(actuals)
 
     # Calculate R-squared score
     r2 = r2_score(actuals, predictions)
