@@ -99,8 +99,9 @@ class DualInputModel(nn.Module):
             nn.Linear(num_structured_features, 12),
             nn.Dropout(0.25),
             nn.ReLU(),
-            nn.Linear(6, 6)
+            nn.Linear(12, 6)
         )
+
 
         self.combined_layer = nn.Sequential(
             nn.Linear(combined_dim, 64),
