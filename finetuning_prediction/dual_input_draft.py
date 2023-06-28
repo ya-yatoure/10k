@@ -189,10 +189,10 @@ for epoch in range(EPOCHS):
                 no_improve_epochs = 0
             else:
                 no_improve_epochs += 1
-            if no_improve_epochs >= 5: 
+            if no_improve_epochs >= 10: 
                 print("Early stopping as no improvement in validation loss for 5 consecutive epochs.")
                 break
-    if no_improve_epochs >= 5:
+    if no_improve_epochs >= 10:
         break  # break out from epoch loop as well
 
 # Generate predictions after all epochs
@@ -205,7 +205,7 @@ actuals = []
 with torch.no_grad():
     for i, batch in enumerate(test_dataloader):
         test_inputs, test_masks, test_structured, targets = (t.to(device) for t in batch)
-        company_ids = test_cik[i * batch_size: (i + 1) * batch_size]  # Adjust indices based on batch size
+        company_ids = test_cik[i * BATCH_SIZE: (i + 1) * BATCH_SIZE]  # Adjust indices based on batch size
         outputs = model(test_inputs, test_masks, test_structured)
         outputs = outputs.cpu().detach().numpy()
 
