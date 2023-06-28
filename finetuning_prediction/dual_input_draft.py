@@ -13,17 +13,30 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 
+# Define the hyperparameters
+BATCH_SIZE = 16
+EPOCHS = 30
+LEARNING_RATE = 1e-3
+LEARNING_RATE_DISTILBERT = 1e-5
+WEIGHT_DECAY = 1e-5
+DATASET_FRACTION = 0.2
+TRAIN_TEST_SPLIT_RATIO = 0.2
+
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 scaler = StandardScaler()
 
-df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")  #
-dataset_fraction = 0.2  # use 10% of the total data
+df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
 
-# Sample dataset_fraction of the data
-df = df.sample(frac=dataset_fraction)
+# Use defined hyperparameter
+df = df.sample(frac=DATASET_FRACTION)
 
 # one hot encoding 'naics2'
 df = pd.get_dummies(df, columns=['naics2'])
+
+# group by companies when test/train splitting so we don't have companies that appear in both test and train sets
+unique_companies = df['cik'].unique()
+train_companies, test_companies = train_test_split(unique_companies, test_size=TRAIN_TEST_SPLIT_RATIO)
+
 
 # group by companies when test/train splitting so we don't have companies that appear in both test and train sets
 unique_companies = df['cik'].unique()
@@ -70,9 +83,10 @@ train_size = int(0.8 * len(train_data))
 val_size = len(train_data) - train_size
 train_data, val_data = torch.utils.data.random_split(train_data, [train_size, val_size])
 
-train_dataloader = DataLoader(train_data, batch_size=16, shuffle=True)
-val_dataloader = DataLoader(val_data, batch_size=16)
-test_dataloader = DataLoader(test_data, batch_size=16)
+# Use defined hyperparameters
+train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE)
+test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
 
 # define attention and dual input model classes here...
@@ -134,24 +148,21 @@ model = DualInputModel(num_structured_features=len(structured_columns), context_
 distilbert_params = model.distilbert.parameters()
 other_params = [p for p in model.parameters() if p not in distilbert_params]
 
-# Use a smaller learning rate for the DistilBERT parameters
+# Use defined hyperparameters
 optimizer = optim.Adam([
-    {'params': distilbert_params, 'lr': 1e-5, 'weight_decay': 1e-5},
-    {'params': other_params, 'lr': 1e-3, 'weight_decay': 1e-5}
+    {'params': distilbert_params, 'lr': LEARNING_RATE_DISTILBERT, 'weight_decay': WEIGHT_DECAY},
+    {'params': other_params, 'lr': LEARNING_RATE, 'weight_decay': WEIGHT_DECAY}
 ])
-
 
 loss_fn = nn.MSELoss()
 
-epochs = 30
-batch_size = 16
 train_losses, val_losses = [], []
 
 # initialize these for early stopping
 best_val_loss = float('inf')
 no_improve_epochs = 0
 
-for epoch in range(epochs):
+for epoch in range(EPOCHS):
     for dataloader, is_training in [(train_dataloader, True), (val_dataloader, False)]:
         total_loss = total_samples = 0
         model.train(is_training)
