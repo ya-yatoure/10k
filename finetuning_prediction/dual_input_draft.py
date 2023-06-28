@@ -138,6 +138,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Define the model
 model = DualInputModel(num_structured_features=len(structured_columns), context_vector_dim=768).to(device)
 
+# Freeze the DistilBERT weights
+for param in model.distilbert.parameters():
+    param.requires_grad = False
 
 # Separately get the parameters of the DistilBERT model and the rest of your model
 distilbert_params = model.distilbert.parameters()
