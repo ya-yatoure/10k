@@ -40,15 +40,25 @@ structured_columns = ['lev', 'logEMV'] + [col for col in df.columns if 'naics2' 
 train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=True)
 train_input_ids = torch.tensor(train_encodings['input_ids'])
 train_attention_mask = torch.tensor(train_encodings['attention_mask'])
-train_structured_data = scaler.fit_transform(train_df[structured_columns])
+
+# Only scale 'lev' and 'logEMV'
+train_structured_data_to_scale = scaler.fit_transform(train_df[['lev', 'logEMV']])
+train_structured_data_one_hot = train_df[[col for col in train_df.columns if 'naics2' in col]].values
+train_structured_data = np.concatenate((train_structured_data_to_scale, train_structured_data_one_hot), axis=1)
 train_structured_data = torch.tensor(train_structured_data, dtype=torch.float)
+
 train_target = torch.tensor(train_df['ER_1'].values, dtype=torch.float)
 
 test_encodings = tokenizer(list(test_df['text']), truncation=True, padding=True)
 test_input_ids = torch.tensor(test_encodings['input_ids'])
 test_attention_mask = torch.tensor(test_encodings['attention_mask'])
-test_structured_data = scaler.transform(test_df[structured_columns])
+
+# Only scale 'lev' and 'logEMV'
+test_structured_data_to_scale = scaler.transform(test_df[['lev', 'logEMV']])
+test_structured_data_one_hot = test_df[[col for col in test_df.columns if 'naics2' in col]].values
+test_structured_data = np.concatenate((test_structured_data_to_scale, test_structured_data_one_hot), axis=1)
 test_structured_data = torch.tensor(test_structured_data, dtype=torch.float)
+
 test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
 
 train_data = TensorDataset(train_input_ids, train_attention_mask, train_structured_data, train_target)
