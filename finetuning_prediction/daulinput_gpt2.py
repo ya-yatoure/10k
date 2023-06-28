@@ -1,10 +1,12 @@
-from transformers import GPT2Model, GPT2TokenizerFast
-from torch import nn
+
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+
+from transformers import GPT2Model, GPT2TokenizerFast
+from torch import nn
 from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn import DataParallel
