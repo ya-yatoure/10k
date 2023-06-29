@@ -139,6 +139,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Define the model
 model = GPT2WithStructuredData(num_structured_features=len(structured_columns), context_vector_dim=768).to(device)
 
+print(model)
 # Freeze the GPT2 weights
 for param in model.gpt2.parameters():
     param.requires_grad = False
