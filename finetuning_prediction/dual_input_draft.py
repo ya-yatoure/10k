@@ -37,13 +37,16 @@ df = pd.get_dummies(df, columns=['naics2'])
 unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=TRAIN_TEST_SPLIT_RATIO)
 
+# Split the train_companies into train and validation
+train_companies, val_companies = train_test_split(train_companies, test_size=0.2)
+
 train_df = df[df['cik'].isin(train_companies)]
+val_df = df[df['cik'].isin(val_companies)]
 test_df = df[df['cik'].isin(test_companies)]
+encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
 # structured columns now include the one-hot-encoded 'naics2' columns as well
 structured_columns = ['lev', 'logEMV'] + [col for col in df.columns if 'naics2' in col]
-
-encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
 # For Train and Test set
 train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=True)
@@ -75,15 +78,24 @@ test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_d
 
 test_cik = test_df['cik'].values.tolist()
 
-train_size = int(0.8 * len(train_data))
-val_size = len(train_data) - train_size
-train_data, val_data = torch.utils.data.random_split(train_data, [train_size, val_size])
+val_encodings = tokenizer(list(val_df['text']), truncation=True, padding=True)
+val_input_ids = torch.tensor(val_encodings['input_ids'])
+val_attention_mask = torch.tensor(val_encodings['attention_mask'])
+
+# Only scale 'lev' and 'logEMV'
+val_structured_data_to_scale = scaler.transform(val_df[['lev', 'logEMV']])
+val_structured_data_one_hot = val_df[[col for col in val_df.columns if 'naics2' in col]].values
+val_structured_data = np.concatenate((val_structured_data_to_scale, val_structured_data_one_hot), axis=1)
+val_structured_data = torch.tensor(val_structured_data, dtype=torch.float)
+
+val_target = torch.tensor(val_df['ER_1'].values, dtype=torch.float)
+
+val_data = TensorDataset(val_input_ids, val_attention_mask, val_structured_data, val_target)
 
 # Use defined hyperparameters
 train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE)
 test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE)
-
 
 # define attention and dual input model classes here...
 # DEFINE MODEL ARCHISTECTURE
