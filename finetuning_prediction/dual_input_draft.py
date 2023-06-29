@@ -19,7 +19,7 @@ EPOCHS = 30
 LEARNING_RATE = 1e-3
 LEARNING_RATE_DISTILBERT = 1e-5
 WEIGHT_DECAY = 1e-5
-DATASET_FRACTION = 1.0
+DATASET_FRACTION = 0.2
 TRAIN_TEST_SPLIT_RATIO = 0.2
 
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
