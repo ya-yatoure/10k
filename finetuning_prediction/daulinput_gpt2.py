@@ -79,9 +79,19 @@ test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_d
 
 test_cik = test_df['cik'].values.tolist()
 
-train_size = int(0.8 * len(train_data))
-val_size = len(train_data) - train_size
-train_data, val_data = torch.utils.data.random_split(train_data, [train_size, val_size])
+val_encodings = tokenizer(list(val_df['text']), truncation=True, padding=True)
+val_input_ids = torch.tensor(val_encodings['input_ids'])
+val_attention_mask = torch.tensor(val_encodings['attention_mask'])
+
+# Only scale 'lev' and 'logEMV'
+val_structured_data_to_scale = scaler.transform(val_df[['lev', 'logEMV']])
+val_structured_data_one_hot = val_df[[col for col in val_df.columns if 'naics2' in col]].values
+val_structured_data = np.concatenate((val_structured_data_to_scale, val_structured_data_one_hot), axis=1)
+val_structured_data = torch.tensor(val_structured_data, dtype=torch.float)
+
+val_target = torch.tensor(val_df['ER_1'].values, dtype=torch.float)
+
+val_data = TensorDataset(val_input_ids, val_attention_mask, val_structured_data, val_target)
 
 # Use defined hyperparameters
 train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
