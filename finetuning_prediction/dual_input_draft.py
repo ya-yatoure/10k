@@ -39,10 +39,11 @@ train_companies, test_companies = train_test_split(unique_companies, test_size=T
 
 train_df = df[df['cik'].isin(train_companies)]
 test_df = df[df['cik'].isin(test_companies)]
-encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
 # structured columns now include the one-hot-encoded 'naics2' columns as well
 structured_columns = ['lev', 'logEMV'] + [col for col in df.columns if 'naics2' in col]
+
+encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
 # For Train and Test set
 train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=True)
