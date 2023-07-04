@@ -101,49 +101,40 @@ val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE, drop_last=True)
 test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE, drop_last=True)
 
 # define attention and dual input model classes here...
-# DEFINE MODEL ARCHISTECTURE
+# DEFINE MODEL ARCHITECTURE
 class DualInputModel(nn.Module):
     def __init__(self, num_structured_features):
         super(DualInputModel, self).__init__()
 
-        # DistilBERT sequence classification model for the text data (unfrozen)
-        config = DistilBertConfig.from_pretrained('distilbert-base-uncased', num_labels=1)
-        self.distilbert = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', config=config)
+        # DistilBERT model for the text data (unfrozen)
+        self.distilbert = DistilBertModel.from_pretrained('distilbert-base-uncased')
 
-        # A feed-forward neural network for the structured data
-        self.ffnn = nn.Sequential(
-            nn.Linear(num_structured_features, 24),
-            nn.BatchNorm1d(24),  # Batch Normalization layer added here
-            nn.ReLU(),
-            nn.Linear(24, 8),
-            nn.BatchNorm1d(8)   # Batch Normalization layer added here
-        )
+        # The size of the hidden state of DistilBERT (768 for 'distilbert-base-uncased')
+        self.hidden_state_size = self.distilbert.config.hidden_size
 
-        # Combined layer for DistilBert sequence output and FFNN output
-        self.combined_layer = nn.Sequential(
-            nn.Linear(1 + 8, 4),  # DistilBert sequence output (1) + FFNN output size (8)
-            nn.BatchNorm1d(4),  # Batch Normalization layer added here
+        # A feed-forward neural network for the combined data
+        self.combined_ffnn = nn.Sequential(
+            nn.Linear(self.hidden_state_size + num_structured_features, 64),  # DistilBert [CLS] hidden state size + num_structured_features
+            nn.BatchNorm1d(64),  # Batch Normalization layer added here
             nn.ReLU(),
-            nn.Linear(4, 1)
+            nn.Linear(64, 1)
         )
 
     def forward(self, input_ids, attention_mask, structured_data):
         # Pass the text data through DistilBert
         distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
 
-        # DistilBert sequence output
-        distilbert_sequence_output = distilbert_output.logits
+        # DistilBert [CLS] token output
+        distilbert_cls_output = distilbert_output.last_hidden_state[:, 0, :]  # Take the hidden state of the first token ([CLS])
 
-        # Pass the structured data through the feed-forward neural network
-        structured_embeddings = self.ffnn(structured_data)
+        # Concatenate the DistilBert [CLS] output and structured data
+        combined_data = torch.cat((distilbert_cls_output, structured_data), dim=1)
 
-        # Concatenate the DistilBert sequence output and structured embeddings
-        combined = torch.cat((distilbert_sequence_output, structured_embeddings), dim=1)
-
-        # Pass the combined data through the combined layer
-        output = self.combined_layer(combined)
+        # Pass the combined data through the combined feed-forward neural network
+        output = self.combined_ffnn(combined_data)
 
         return output
+
 
 # Check if CUDA is available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
