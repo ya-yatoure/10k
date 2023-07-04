@@ -101,7 +101,6 @@ test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
 # define attention and dual input model classes here...
 # DEFINE MODEL ARCHISTECTURE
-
 class DualInputModel(nn.Module):
     def __init__(self, num_structured_features):
         super(DualInputModel, self).__init__()
@@ -147,12 +146,11 @@ class DualInputModel(nn.Module):
 
         return output
 
-    
 # Check if CUDA is available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Define the model
-model = DualInputModel(num_structured_features=len(structured_columns), context_vector_dim=768).to(device)
+model = DualInputModel(num_structured_features=len(structured_columns)).to(device)
 
 print(Model)
 # Freeze the DistilBERT weights
