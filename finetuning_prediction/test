@@ -17,11 +17,11 @@ from sklearn.metrics import r2_score
 
 # Define the hyperparameters
 BATCH_SIZE = 16
-EPOCHS = 30
+EPOCHS = 50
 LEARNING_RATE = 1e-2
 LEARNING_RATE_DISTILBERT = 1e-4
 WEIGHT_DECAY = 1e-5
-DATASET_FRACTION = 0.4
+DATASET_FRACTION = 0.5
 TRAIN_TEST_SPLIT_RATIO = 0.2
 
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
@@ -208,10 +208,10 @@ for epoch in range(EPOCHS):
                 no_improve_epochs = 0
             else:
                 no_improve_epochs += 1
-            if no_improve_epochs >= 10: 
+            if no_improve_epochs >= 20: 
                 print("Early stopping as no improvement in validation loss for 5 consecutive epochs.")
                 break
-    if no_improve_epochs >= 10:
+    if no_improve_epochs >= 20:
         break  # break out from epoch loop as well
 
 # Generate predictions after all epochs
