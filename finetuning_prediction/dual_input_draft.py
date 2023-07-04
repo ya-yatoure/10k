@@ -16,10 +16,10 @@ from sklearn.metrics import r2_score
 # Define the hyperparameters
 BATCH_SIZE = 16
 EPOCHS = 30
-LEARNING_RATE = 1e-3
-LEARNING_RATE_DISTILBERT = 1e-5
+LEARNING_RATE = 1e-2
+LEARNING_RATE_DISTILBERT = 1e-4
 WEIGHT_DECAY = 1e-5
-DATASET_FRACTION = 0.2
+DATASET_FRACTION = 1.0
 TRAIN_TEST_SPLIT_RATIO = 0.2
 
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
