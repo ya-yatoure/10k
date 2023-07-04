@@ -121,11 +121,11 @@ class DualInputModel(nn.Module):
 
         # Combined layer for DistilBert sequence output and FFNN output
         self.combined_layer = nn.Sequential(
-            nn.Linear(1 + 8, 64),  # DistilBert sequence output (1) + FFNN output size (8)
-            nn.BatchNorm1d(64),  # Batch Normalization layer added here
+            nn.Linear(1 + 8, 4),  # DistilBert sequence output (1) + FFNN output size (8)
+            nn.BatchNorm1d(4,  # Batch Normalization layer added here
             nn.Dropout(0.25),
             nn.ReLU(),
-            nn.Linear(64, 1)
+            nn.Linear(4, 1)
         )
 
     def forward(self, input_ids, attention_mask, structured_data):
