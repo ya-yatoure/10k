@@ -94,10 +94,11 @@ val_target = torch.tensor(val_df['ER_1'].values, dtype=torch.float)
 
 val_data = TensorDataset(val_input_ids, val_attention_mask, val_structured_data, val_target)
 
+
 # Use defined hyperparameters
-train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
-val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE)
-test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE)
+train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE, drop_last=True)
+test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE, drop_last=True)
 
 # define attention and dual input model classes here...
 # DEFINE MODEL ARCHISTECTURE
