@@ -10,8 +10,8 @@ from sklearn.model_selection import train_test_split
 # Set hyperparameters
 TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 16
-EPOCHS = 50
-LEARNING_RATE = 5e-5
+EPOCHS = 25
+LEARNING_RATE = 5e-2
 DATASET_FRACTION = 0.4
 
 # Load data
