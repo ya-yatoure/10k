@@ -93,6 +93,10 @@ config = DistilBertConfig.from_pretrained("distilbert-base-uncased")
 config.seq_classif_dropout = 0.2
 model = DistilBertForSequenceRegression(config)
 
+# Freeze the distilbert parameters
+for param in model.distilbert.parameters():
+    param.requires_grad = False
+    
 # Define the optimizer
 optimizer = optim.Adam([
     {'params': model.distilbert.parameters(), 'lr': 1e-5},  # Lower learning rate for pre-trained parameters
