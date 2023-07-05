@@ -97,15 +97,21 @@ class DistilBertForSequenceRegression(DistilBertModel):
 
         return logits if loss is None else (loss, logits)
 
+
 # Load pre-trained model
 config = DistilBertConfig.from_pretrained("distilbert-base-uncased")
 config.seq_classif_dropout = 0.2
 model = DistilBertForSequenceRegression(config)
 
-# Then continue your script from the optimizer definition
+# Freeze the distilbert parameters
+for param in model.distilbert.parameters():
+    param.requires_grad = False
 
 # Define the optimizer
-optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
+optimizer = AdamW([{'params': model.pre_classifier.parameters()},
+                   {'params': model.classifier.parameters()}], 
+                   lr=LEARNING_RATE)
+
 
 # Training loop
 # Check if CUDA is available and set device to GPU if it is
