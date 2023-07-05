@@ -3,6 +3,8 @@ from transformers import DistilBertTokenizerFast, DistilBertModel, AdamW, Distil
 
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification, AdamW
 from torch.utils.data import TensorDataset, DataLoader
 from torch import nn
@@ -13,7 +15,7 @@ import pandas as pd
 # Set hyperparameters
 TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 16
-EPOCHS = 3
+EPOCHS = 50
 LEARNING_RATE = 5e-5
 DATASET_FRACTION = 0.4
 
@@ -145,3 +147,22 @@ for epoch in range(EPOCHS):
 
     avg_val_loss = total_eval_loss / len(dataloaders['val'])
     print(f"Validation Loss: {avg_val_loss}")
+
+# Generate predictions on test set
+model.eval()
+preds = []
+actuals = []
+
+with torch.no_grad():
+    for batch in dataloaders['test']:
+        # Move data to device
+        input_ids, attention_mask, targets = [b.to(device) for b in batch]
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
+        # outputs[1] gives the predictions from the model
+        preds.extend(outputs[1].detach().cpu().numpy())
+        actuals.extend(targets.detach().cpu().numpy())
+
+# Compute R-squared
+r_squared = r2_score(actuals, preds)
+
+print(f"Out of Sample R-Squared: {r_squared}")
