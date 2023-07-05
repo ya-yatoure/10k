@@ -121,9 +121,10 @@ for param in model.distilbert.parameters():
     param.requires_grad = False
 
 # Define the optimizer
-optimizer = AdamW([{'params': model.pre_classifier.parameters()},
-                   {'params': model.classifier.parameters()}], 
-                   lr=LEARNING_RATE)
+optimizer = optim.Adam([
+    {'params': model.distilbert.parameters()},
+    {'params': model.regressor.parameters()}], 
+    lr=LEARNING_RATE)
 
 
 # Training loop
