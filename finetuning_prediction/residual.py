@@ -15,10 +15,10 @@ TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 16
 EPOCHS = 3
 LEARNING_RATE = 5e-5
-DATASET_FRACTION = 0.003
+DATASET_FRACTION = 0.4
 
 # Load data
-df = pd.read_csv("/Users/benjaminhaussmann/Documents/GitHub/10k/Data/text_covars_to512_2019_sample_90mb.csv")
+df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
 # One hot encode 'naics2'
