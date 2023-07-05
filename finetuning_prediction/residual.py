@@ -71,35 +71,104 @@ for dataset, name in datasets:
 
     dataloaders[name] = DataLoader(data, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 
-# Define the model
+# Define the custom model
 class DistilBertForSequenceRegression(DistilBertModel):
     def __init__(self, config):
+        # Calling the init function of the parent class
         super().__init__(config)
+
+        # We keep the base Distilbert model (transformer + embedding)
+        # This handles the lower level language processing
         self.distilbert = DistilBertModel(config)
+
+        # The pre_classifier layer is used to reduce dimensionality.
+        # It's a feed-forward network that sits on top of the transformer model.
+        # First linear layer takes input of dimension (config.dim) 
+        # and outputs the same dimension.
+        # After ReLU activation, second linear layer reduces 
+        # dimensionality by half to (config.dim // 2).
         self.pre_classifier = nn.Sequential(
-        nn.Linear(config.dim, config.dim),
-        nn.ReLU(),
-        nn.Linear(config.dim, config.dim//2),
-        nn.ReLU() 
+            nn.Linear(config.dim, config.dim),  # First Linear layer
+            nn.ReLU(),  # Non-linear activation function
+            nn.Linear(config.dim, config.dim // 2),  # Second Linear layer
+            nn.ReLU()  # Non-linear activation function
         )
-        self.classifier = nn.Linear(config.dim//2, 1)
+
+        # The classifier layer is our final fully connected layer,
+        # which reduces the output to the final number of classes (in this case 1).
+        # It takes in the output from the pre_classifier layer of dimension (config.dim // 2)
+        # and outputs a single value (regression output).
+        self.classifier = nn.Linear(config.dim // 2, 1)
+
+        # Dropout layer for regularizing the model and preventing overfitting.
+        # It randomly zeroes some of the elements from the input tensor 
+        # with probability given by config.seq_classif_dropout.
         self.dropout = nn.Dropout(config.seq_classif_dropout)
+
+        # Call function to initialize the weights
         self.init_weights()
 
-    def forward(self, input_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None, labels=None, output_attentions=None, output_hidden_states=None, return_dict=None):
-        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask, head_mask=head_mask, inputs_embeds=inputs_embeds, output_attentions=output_attentions, output_hidden_states=output_hidden_states, return_dict=return_dict)
-        hidden_state = distilbert_output[0]  # (bs, seq_len, dim)
-        pooled_output = hidden_state[:, 0]  # (bs, dim)
-        pooled_output = self.pre_classifier(pooled_output)  # (bs, dim)
-        pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
-        pooled_output = self.dropout(pooled_output)  # (bs, dim)
-        logits = self.classifier(pooled_output)  # (bs, 1)
+    def forward(
+            self, 
+            input_ids=None, 
+            attention_mask=None, 
+            head_mask=None, 
+            inputs_embeds=None, 
+            labels=None, 
+            output_attentions=None, 
+            output_hidden_states=None, 
+            return_dict=None):
+        """
+        This is the function called when we pass data through the model.
+        The various stages defined here correspond to the flow of data 
+        through the model, from input to output.
+        """
 
+        # Forward pass through the base distilbert model.
+        # input_ids and attention_mask are (bs, seq_len)
+        distilbert_output = self.distilbert(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict
+        )
+
+        # We use the output from the last layer of the distilbert model.
+        # hidden_state dimension is (bs, seq_len, dim)
+        hidden_state = distilbert_output[0]
+
+        # We take the embeddings of the [CLS] token (first token).
+        # pooled_output dimension becomes (bs, dim)
+        pooled_output = hidden_state[:, 0]
+
+        # Pass the embeddings through our pre_classifier layer.
+        # Dimension changes to (bs, dim // 2)
+        pooled_output = self.pre_classifier(pooled_output)
+
+        # Apply the ReLU activation function for adding non-linearity
+        pooled_output = nn.ReLU()(pooled_output)
+
+        # Apply dropout layer for regularizing the model
+        # Dimension remains (bs, dim // 2)
+        pooled_output = self.dropout(pooled_output)
+
+        # The final layer that gives us our logits (raw prediction values)
+        # Dimension changes to (bs, 1)
+        logits = self.classifier(pooled_output)
+
+        # Calculate the loss value for training phase
         loss = None
         if labels is not None:
+            # Mean Squared Error loss used as it's a regression problem
             loss_fct = nn.MSELoss()
+            # Calculating the MSE loss between the predicted and actual values
             loss = loss_fct(logits.view(-1), labels.view(-1))
 
+        # If in evaluation mode, we return the loss and logits
+        # If in training mode, only loss is returned
         return logits if loss is None else (loss, logits)
 
 
