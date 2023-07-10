@@ -20,8 +20,14 @@ LEARNING_RATE = 5e-2
 DATASET_FRACTION = 1.0
 
 # Load data
-df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
+df = pd.read_csv("../Data/text_covars_to512_2019_HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
+
+# print out the number of unique 'cik' values 
+print(f"Number of unique companies: {len(df['cik'].unique())}")
+
+# print the number of input sequences we have (ie rows)
+print(f"Number of input sequences: {len(df)}")
 
 # One hot encode 'naics2'
 df = pd.get_dummies(df, columns=['naics2'])
