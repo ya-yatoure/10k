@@ -13,11 +13,11 @@ import torch.optim as optim
 import pandas as pd
 
 # Set hyperparameters
-TRAIN_TEST_SPLIT_RATIO = 0.2
+TRAIN_TEST_SPLIT_RATIO = 0.4
 BATCH_SIZE = 16
-EPOCHS = 50
+EPOCHS = 25
 LEARNING_RATE = 5e-2
-DATASET_FRACTION = 0.4
+DATASET_FRACTION = 1.0
 
 # Load data
 df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
