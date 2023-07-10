@@ -23,6 +23,20 @@ DATASET_FRACTION = 1.0
 df = pd.read_csv("../Data/text_covars_to512_2019_HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
+print(f"Null values in train text: {train_df['text'].isnull().sum()}")
+print(f"Null values in val text: {val_df['text'].isnull().sum()}")
+print(f"Null values in test text: {test_df['text'].isnull().sum()}")
+
+# Replace null values with empty string
+train_df['text'].fillna("", inplace=True)
+val_df['text'].fillna("", inplace=True)
+test_df['text'].fillna("", inplace=True)
+
+# If there are non-string values, you might need to convert them to string
+train_df['text'] = train_df['text'].apply(str)
+val_df['text'] = val_df['text'].apply(str)
+test_df['text'] = test_df['text'].apply(str)
+
 # print out the number of unique 'cik' values 
 print(f"Number of unique companies: {len(df['cik'].unique())}")
 
