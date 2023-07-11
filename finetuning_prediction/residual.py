@@ -20,6 +20,9 @@ EPOCHS = 20
 LEARNING_RATE = 5e-2
 DATASET_FRACTION = 1.0
 
+# keep only clumns where day_type == economic_fallout
+df = df[df['day_type'] == 'economic_fallout']
+
 # Load data
 df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
