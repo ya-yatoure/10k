@@ -22,7 +22,7 @@ DATASET_FRACTION = 1.0
 
 
 
-# Load data
+# Load data n
 df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
