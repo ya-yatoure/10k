@@ -20,16 +20,18 @@ EPOCHS = 20
 LEARNING_RATE = 5e-2
 DATASET_FRACTION = 1.0
 
-# keep only clumns where day_type == economic_fallout
-df = df[df['day_type'] == 'economic_fallout']
+
 
 # Load data
 df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
+# keep only clumns where day_type == economic_fallout
+df = df[df['day_type'] == 'economic_fallout']
 # One-hot encode 'naics2' and 'day_type' columns
 df = pd.get_dummies(df, columns=['naics2', 'day_type'])
 day_type_columns = [col for col in df.columns if 'day_type' in col]
+
 
 
 # print out the number of unique 'cik' values 
