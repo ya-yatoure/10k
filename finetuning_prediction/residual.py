@@ -177,11 +177,9 @@ for epoch in range(EPOCHS):
     model.train()
     for batch in dataloaders['train']:
         input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
-        # Move data to device
-        input_ids, attention_mask, targets = [b.to(device) for b in batch]
-        
+
         optimizer.zero_grad()
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, day_type_data=day_type_data, labels=targets)
         loss = outputs[0]  # access loss from the tuple
         total_loss += loss.item()
         loss.backward()
@@ -194,11 +192,10 @@ for epoch in range(EPOCHS):
     model.eval()
     total_eval_loss = 0
     for batch in dataloaders['val']:
-        # Move data to device
-        input_ids, attention_mask, targets = [b.to(device) for b in batch]
+        input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
         
         with torch.no_grad():
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, day_type_data=day_type_data, labels=targets)
         loss = outputs[0]  # access loss from the tuple
         total_eval_loss += loss.item()
 
@@ -212,9 +209,8 @@ actuals = []
 
 with torch.no_grad():
     for batch in dataloaders['test']:
-        # Move data to device
-        input_ids, attention_mask, targets = [b.to(device) for b in batch]
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
+        input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, day_type_data=day_type_data, labels=targets)
         # outputs[1] gives the predictions from the model
         preds.extend(outputs[1].detach().cpu().numpy())
         actuals.extend(targets.detach().cpu().numpy())
