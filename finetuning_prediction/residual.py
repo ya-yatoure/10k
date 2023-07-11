@@ -20,8 +20,11 @@ LEARNING_RATE = 5e-2
 DATASET_FRACTION = 1.0
 
 # Load data
-df = pd.read_csv("../Data/text_covars_to512_2019_HEADERS.csv")
+df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
+
+# One-hot encode 'naics2' column
+df = pd.get_dummies(df, columns=['naics2'])
 
 # print out the number of unique 'cik' values 
 print(f"Number of unique companies: {len(df['cik'].unique())}")
@@ -29,24 +32,35 @@ print(f"Number of unique companies: {len(df['cik'].unique())}")
 # print the number of input sequences we have (ie rows)
 print(f"Number of input sequences: {len(df)}")
 
-# One hot encode 'naics2'
-df = pd.get_dummies(df, columns=['naics2'])
-
-
 # Define structured features and target
 structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
 target = 'ER_1'
 
-# Fit a regression model using structured data
-X = df[structured_features].values
-y = df[target].values
+# Initialize an empty DataFrame to store the processed data
+df_processed = pd.DataFrame()
 
-reg_model = LinearRegression()
-reg_model.fit(X, y)
+# Loop over each unique 'day_type'
+for day_type in df['day_type'].unique():
+    # Filter df by current 'day_type' and create a copy
+    df_day_type = df[df['day_type'] == day_type].copy()
+    
+    # Fit a regression model using structured data for the current 'day_type'
+    X = df_day_type[structured_features].values
+    y = df_day_type[target].values
 
-# Calculate residuals
-df['residuals'] = y - reg_model.predict(X)
+    reg_model = LinearRegression()
+    reg_model.fit(X, y)
 
+    # Calculate residuals
+    df_day_type['residuals'] = y - reg_model.predict(X)
+
+    # Append the processed data to df_processed
+    df_processed = pd.concat([df_processed, df_day_type])
+
+# Update df with df_processed
+df = df_processed
+
+print(df.head())
 # Initialize tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
