@@ -3,6 +3,7 @@ from transformers import DistilBertTokenizerFast, DistilBertModel, AdamW, Distil
 
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import r2_score
 
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification, AdamW
@@ -20,8 +21,13 @@ LEARNING_RATE = 5e-2
 DATASET_FRACTION = 1.0
 
 # Load data
-df = pd.read_csv("../Data/text_covars_to512_2019_HEADERS.csv")
+df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
+
+# One-hot encode 'naics2' and 'day_type' columns
+df = pd.get_dummies(df, columns=['naics2', 'day_type'])
+day_type_columns = [col for col in df.columns if 'day_type' in col]
+
 
 # print out the number of unique 'cik' values 
 print(f"Number of unique companies: {len(df['cik'].unique())}")
@@ -29,24 +35,35 @@ print(f"Number of unique companies: {len(df['cik'].unique())}")
 # print the number of input sequences we have (ie rows)
 print(f"Number of input sequences: {len(df)}")
 
-# One hot encode 'naics2'
-df = pd.get_dummies(df, columns=['naics2'])
-
-
 # Define structured features and target
 structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
 target = 'ER_1'
 
-# Fit a regression model using structured data
-X = df[structured_features].values
-y = df[target].values
+# Initialize an empty DataFrame to store the processed data
+df_processed = pd.DataFrame()
 
-reg_model = LinearRegression()
-reg_model.fit(X, y)
+# Loop over each unique 'day_type'
+for day_type in df['day_type'].unique():
+    # Filter df by current 'day_type' and create a copy
+    df_day_type = df[df['day_type'] == day_type].copy()
+    
+    # Fit a regression model using structured data for the current 'day_type'
+    X = df_day_type[structured_features].values
+    y = df_day_type[target].values
 
-# Calculate residuals
-df['residuals'] = y - reg_model.predict(X)
+    reg_model = LinearRegression()
+    reg_model.fit(X, y)
 
+    # Calculate residuals
+    df_day_type['residuals'] = y - reg_model.predict(X)
+
+    # Append the processed data to df_processed
+    df_processed = pd.concat([df_processed, df_day_type])
+
+# Update df with df_processed
+df = df_processed
+
+print(df.head())
 # Initialize tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
@@ -84,51 +101,50 @@ for dataset, name in datasets:
     encodings = tokenizer(list(dataset['text']), truncation=True, padding=True)
     input_ids = torch.tensor(encodings['input_ids'])
     attention_mask = torch.tensor(encodings['attention_mask'])
-
+    
+    # Include the one-hot encoded day type data
+    day_type_data = torch.tensor(dataset[day_type_columns].values, dtype=torch.float)
+    
     target = torch.tensor(dataset['residuals'].values, dtype=torch.float)
-
-    data = TensorDataset(input_ids, attention_mask, target)
-
+    
+    data = TensorDataset(input_ids, attention_mask, day_type_data, target)
     dataloaders[name] = DataLoader(data, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 
-# Define the custom model
 class DistilBertForSequenceRegression(DistilBertModel):
     def __init__(self, config):
         super().__init__(config)
         self.distilbert = DistilBertModel(config)
-        self.pre_classifier = nn.Sequential(
-            nn.Linear(config.dim, config.dim),  # First Linear layer
-            nn.ReLU(),  # ReLU activation
-            nn.Linear(config.dim, config.dim // 2),  # Second Linear layer
-            nn.ReLU()  # ReLU activation
+        num_day_type = len(day_type_columns)
+        
+        self.day_type_layer = nn.Sequential(
+            nn.Linear(num_day_type, 50),  # Adjust the hidden layer size as needed
+            nn.ReLU(),
+            nn.Dropout(0.2)
         )
-        self.regressor = nn.Linear(config.dim//2, 1)  # Output layer
-        self.dropout = nn.Dropout(config.seq_classif_dropout)
+        self.pre_classifier = nn.Sequential(
+            nn.Linear(config.dim + 50, config.dim),  # Adjust the input size
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+        self.regressor = nn.Linear(config.dim, 1)
         self.init_weights()
 
-    def forward(self, input_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None, labels=None, output_attentions=None, output_hidden_states=None, return_dict=None):
-        distilbert_output = self.distilbert(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict
-        )
+    def forward(self, input_ids=None, attention_mask=None, day_type_data=None, labels=None):
+        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
         hidden_state = distilbert_output[0]
         pooled_output = hidden_state[:, 0]
+
+        day_type_output = self.day_type_layer(day_type_data)
+        pooled_output = torch.cat((pooled_output, day_type_output), dim=1)
+
         pooled_output = self.pre_classifier(pooled_output)
-        pooled_output = nn.ReLU()(pooled_output)
-        pooled_output = self.dropout(pooled_output)
-        predictions = self.regressor(pooled_output)  # Predictions instead of logits
+        predictions = self.regressor(pooled_output)
 
         loss = None
         if labels is not None:
             loss_fct = nn.MSELoss()
             loss = loss_fct(predictions.view(-1), labels.view(-1))
-
-        return predictions if loss is None else (loss, predictions)  # Return predictions instead of logits
+        return predictions if loss is None else (loss, predictions)
 
 
 # Load pre-trained model
@@ -160,6 +176,7 @@ for epoch in range(EPOCHS):
     total_loss = 0
     model.train()
     for batch in dataloaders['train']:
+        input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
         # Move data to device
         input_ids, attention_mask, targets = [b.to(device) for b in batch]
         
