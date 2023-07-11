@@ -26,8 +26,8 @@ DATASET_FRACTION = 1.0
 df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
-# keep only clumns where day_type == economic_fallout
-df = df[df['day_type'] == 'economic_fallout']
+# keep only clumns where day_type == fiscal_policy_stimulus
+df = df[df['day_type'] == 'fiscal_policy_stimulus']
 # One-hot encode 'naics2' and 'day_type' columns
 df = pd.get_dummies(df, columns=['naics2', 'day_type'])
 day_type_columns = [col for col in df.columns if 'day_type' in col]
