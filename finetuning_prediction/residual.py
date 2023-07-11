@@ -14,7 +14,7 @@ import torch.optim as optim
 import pandas as pd
 
 # Set hyperparameters
-TRAIN_TEST_SPLIT_RATIO = 0.4
+TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 16
 EPOCHS = 20
 LEARNING_RATE = 5e-2
@@ -117,12 +117,10 @@ class DistilBertForSequenceRegression(DistilBertModel):
         num_day_type = len(day_type_columns)
         
         self.day_type_layer = nn.Sequential(
-            nn.Linear(num_day_type, 50),  # Adjust the hidden layer size as needed
-            nn.ReLU(),
-            nn.Dropout(0.2)
+            nn.Linear(num_day_type, 6)  # Adjust the hidden layer size as needed
         )
         self.pre_classifier = nn.Sequential(
-            nn.Linear(config.dim + 50, config.dim),  # Adjust the input size
+            nn.Linear(config.dim + 6, config.dim),  # Adjust the input size
             nn.ReLU(),
             nn.Dropout(0.2)
         )
