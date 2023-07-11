@@ -43,9 +43,9 @@ target = 'ER_1'
 df_processed = pd.DataFrame()
 
 # Loop over each unique 'day_type'
-for day_type in df['day_type'].unique():
+for day_type in day_type_columns:
     # Filter df by current 'day_type' and create a copy
-    df_day_type = df[df['day_type'] == day_type].copy()
+    df_day_type = df[df[day_type] == 1].copy()
     
     # Fit a regression model using structured data for the current 'day_type'
     X = df_day_type[structured_features].values
