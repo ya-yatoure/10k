@@ -17,7 +17,7 @@ import pandas as pd
 # Set hyperparameters
 TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 32
-EPOCHS = 100
+EPOCHS = 50
 LEARNING_RATE = 0.05
 DATASET_FRACTION = 1.0
 
