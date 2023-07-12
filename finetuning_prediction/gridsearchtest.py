@@ -7,6 +7,7 @@ from sklearn.metrics import r2_score
 from torch.utils.data import TensorDataset, DataLoader
 from torch import nn
 import torch
+import torch.nn.functional as F  # Add this import
 import torch.optim as optim
 import pandas as pd
 import numpy as np
@@ -148,7 +149,7 @@ for hyperparams in ParameterGrid(hyperparams_grid):
     for epoch in range(EPOCHS):
         # (same as in your original script)
 
-    # Generate predictions on test set
+        # Generate predictions on test set
         model.eval()
         preds = []
         actuals = []
@@ -160,6 +161,6 @@ for hyperparams in ParameterGrid(hyperparams_grid):
                 preds.extend(outputs.detach().cpu().numpy())
                 actuals.extend(targets.detach().cpu().numpy())
 
-    # Compute R-squared
+        # Compute R-squared
         r_squared = r2_score(actuals, preds)
         print(f"Out of Sample R-Squared: {r_squared} with BATCH_SIZE: {BATCH_SIZE}, LEARNING_RATE: {LEARNING_RATE}, EPOCHS: {EPOCHS}, DATASET_FRACTION: {DATASET_FRACTION}")
