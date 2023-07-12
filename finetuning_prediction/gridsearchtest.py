@@ -19,16 +19,15 @@ class FFN(nn.Module):
         self.hidden_dim = hidden_dim
         self.dropout_p = dropout_p
         self.dropout = nn.Dropout(dropout_p)
-        self.linear1 = nn.Linear(hidden_dim, hidden_dim // 2)
-        self.linear2 = nn.Linear(hidden_dim // 2, hidden_dim // 2)
-        self.linear3 = nn.Linear(hidden_dim // 2, 1)
+        self.linear1 = nn.Linear(hidden_dim, hidden_dim // 4)
+        self.linear2 = nn.Linear(hidden_dim // 4, hidden_dim // 8)
+        self.linear3 = nn.Linear(hidden_dim // 8, 1)
 
     def forward(self, x):
         x = self.dropout(F.relu(self.linear1(x)))
         x = self.dropout(F.relu(self.linear2(x)))
         x = self.linear3(x)
         return x
-
 
 
 # Define the model
