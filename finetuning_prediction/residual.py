@@ -13,14 +13,13 @@ import torch
 import torch.optim as optim
 import pandas as pd
 
+
 # Set hyperparameters
 TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 32
 EPOCHS = 20
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.2
 DATASET_FRACTION = 1.0
-
-
 
 # Load data n
 df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
@@ -28,11 +27,9 @@ df = df.sample(frac=DATASET_FRACTION)
 
 # keep only clumns where day_type == fiscal_policy_stimulus
 df = df[df['day_type'] == 'fiscal_policy_stimulus']
-# One-hot encode 'naics2' and 'day_type' columns
-df = pd.get_dummies(df, columns=['naics2', 'day_type'])
-day_type_columns = [col for col in df.columns if 'day_type' in col]
 
-
+# One-hot encode 'naics2'
+df = pd.get_dummies(df, columns=['naics2'])
 
 # print out the number of unique 'cik' values 
 print(f"Number of unique companies: {len(df['cik'].unique())}")
@@ -44,31 +41,22 @@ print(f"Number of input sequences: {len(df)}")
 structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
 target = 'ER_1'
 
-# Initialize an empty DataFrame to store the processed data
-df_processed = pd.DataFrame()
-
-# Loop over each unique 'day_type'
-for day_type in day_type_columns:
-    # Filter df by current 'day_type' and create a copy
-    df_day_type = df[df[day_type] == 1].copy()
-    
     # Fit a regression model using structured data for the current 'day_type'
-    X = df_day_type[structured_features].values
-    y = df_day_type[target].values
+X = df[structured_features].values
+y = df[target].values
 
-    reg_model = LinearRegression()
-    reg_model.fit(X, y)
+reg_model = LinearRegression()
+reg_model.fit(X, y)
 
-    # Calculate residuals
-    df_day_type['residuals'] = y - reg_model.predict(X)
-
-    # Append the processed data to df_processed
-    df_processed = pd.concat([df_processed, df_day_type])
-
-# Update df with df_processed
-df = df_processed
+# Calculate residuals
+df['residuals'] = y - reg_model.predict(X)
 
 print(df.head())
+
+# Print the r-squared score
+print(f"R-squared score: {r2_score(y, reg_model.predict(X))}")
+
+
 # Initialize tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
@@ -107,38 +95,33 @@ for dataset, name in datasets:
     input_ids = torch.tensor(encodings['input_ids'])
     attention_mask = torch.tensor(encodings['attention_mask'])
     
-    # Include the one-hot encoded day type data
-    day_type_data = torch.tensor(dataset[day_type_columns].values, dtype=torch.float)
     
     target = torch.tensor(dataset['residuals'].values, dtype=torch.float)
     
-    data = TensorDataset(input_ids, attention_mask, day_type_data, target)
+    data = TensorDataset(input_ids, attention_mask, target)
     dataloaders[name] = DataLoader(data, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 
 class DistilBertForSequenceRegression(DistilBertModel):
     def __init__(self, config):
         super().__init__(config)
         self.distilbert = DistilBertModel(config)
-        num_day_type = len(day_type_columns)
         
-        self.day_type_layer = nn.Sequential(
-            nn.Linear(num_day_type, 6)  # Adjust the hidden layer size as needed
-        )
+        # Additional layers on top of distilbert
         self.pre_classifier = nn.Sequential(
-            nn.Linear(config.dim + 6, config.dim),  # Adjust the input size
+            nn.Linear(config.dim, 60),  # Adjust the input size
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(60, 30),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
-        self.regressor = nn.Linear(config.dim, 1)
+        self.regressor = nn.Linear(30, 1)  # Output layer
         self.init_weights()
 
-    def forward(self, input_ids=None, attention_mask=None, day_type_data=None, labels=None):
+    def forward(self, input_ids=None, attention_mask=None, labels=None):
         distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
-        hidden_state = distilbert_output[0]
-        pooled_output = hidden_state[:, 0]
-
-        day_type_output = self.day_type_layer(day_type_data)
-        pooled_output = torch.cat((pooled_output, day_type_output), dim=1)
+        hidden_state = distilbert_output[0]  # Shape : [batch_size, seq_length, hidden_dim]
+        pooled_output = hidden_state[:, 0]  # Shape : [batch_size, hidden_dim]. We are taking the [CLS] representation
 
         pooled_output = self.pre_classifier(pooled_output)
         predictions = self.regressor(pooled_output)
@@ -179,10 +162,10 @@ for epoch in range(EPOCHS):
     total_loss = 0
     model.train()
     for batch in dataloaders['train']:
-        input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
+        input_ids, attention_mask, targets = [b.to(device) for b in batch]
 
         optimizer.zero_grad()
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask, day_type_data=day_type_data, labels=targets)
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
         loss = outputs[0]  # access loss from the tuple
         total_loss += loss.item()
         loss.backward()
@@ -195,10 +178,10 @@ for epoch in range(EPOCHS):
     model.eval()
     total_eval_loss = 0
     for batch in dataloaders['val']:
-        input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
+        input_ids, attention_mask, targets = [b.to(device) for b in batch]
         
         with torch.no_grad():
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, day_type_data=day_type_data, labels=targets)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
         loss = outputs[0]  # access loss from the tuple
         total_eval_loss += loss.item()
 
@@ -212,8 +195,8 @@ actuals = []
 
 with torch.no_grad():
     for batch in dataloaders['test']:
-        input_ids, attention_mask, day_type_data, targets = [b.to(device) for b in batch]
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask, day_type_data=day_type_data, labels=targets)
+        input_ids, attention_mask, targets = [b.to(device) for b in batch]
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
         # outputs[1] gives the predictions from the model
         preds.extend(outputs[1].detach().cpu().numpy())
         actuals.extend(targets.detach().cpu().numpy())
