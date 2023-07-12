@@ -148,22 +148,22 @@ for hyperparams in ParameterGrid(hyperparams_grid):
     # Training loop
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
-
+    
     for epoch in range(EPOCHS):
         # (same as in your original script)
-
+    
         # Generate predictions on test set
         model.eval()
         preds = []
         actuals = []
-
+    
         with torch.no_grad():
             for batch in dataloaders['test']:
                 input_ids, attention_mask, targets = [b.to(device) for b in batch]
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                preds.extend(outputs.detach().cpu().numpy())
-                actuals.extend(targets.detach().cpu().numpy())
-
+                preds.extend(outputs.detach().cpu().numpy().flatten())  # Flatten the predictions
+                actuals.extend(targets.detach().cpu().numpy().flatten())  # Flatten the targets
+    
         # Compute R-squared
         r_squared = r2_score(actuals, preds)
         print(f"Out of Sample R-Squared: {r_squared} with BATCH_SIZE: {BATCH_SIZE}, LEARNING_RATE: {LEARNING_RATE}, EPOCHS: {EPOCHS}, DATASET_FRACTION: {DATASET_FRACTION}")
