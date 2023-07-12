@@ -111,7 +111,7 @@ class DistilBertForSequenceRegression(DistilBertModel):
             nn.Linear(config.dim, 256),  # Adjust the input size
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(60, 30),
+            nn.Linear(256, 30),
             nn.ReLU()
         )
         self.regressor = nn.Linear(30, 1)  # Output layer
