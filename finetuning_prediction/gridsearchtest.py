@@ -12,7 +12,7 @@ import torch.optim as optim
 import pandas as pd
 import numpy as np
 
-# YOUR NEW CODE HERE
+
 # Define the FFN
 class FFN(nn.Module):
     def __init__(self, hidden_dim, dropout_p=0.1):
@@ -20,13 +20,14 @@ class FFN(nn.Module):
         self.hidden_dim = hidden_dim
         self.dropout_p = dropout_p
         self.dropout = nn.Dropout(dropout_p)
-        self.linear1 = nn.Linear(hidden_dim, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, 1)  # Output dimension is 1 for regression task
+        self.linear1 = nn.Linear(hidden_dim, hidden_dim // 2)  # Adjusted dimensions
+        self.linear2 = nn.Linear(hidden_dim // 2, 1)  # Adjusted dimensions
 
     def forward(self, x):
         x = self.dropout(F.relu(self.linear1(x)))
         x = self.linear2(x)
         return x
+
 
 # Define the model
 class DistilBertForSequenceRegression(nn.Module):
@@ -96,8 +97,6 @@ for hyperparams in ParameterGrid(hyperparams_grid):
 
     # Calculate residuals
     df['residuals'] = y - reg_model.predict(X)
-
-    print(df.head())
 
     # Print the r-squared score
     print(f"R-squared score: {r2_score(y, reg_model.predict(X))}")
