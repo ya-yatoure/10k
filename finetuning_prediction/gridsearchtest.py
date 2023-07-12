@@ -12,7 +12,6 @@ import torch.optim as optim
 import pandas as pd
 import numpy as np
 
-
 # Define the FFN
 class FFN(nn.Module):
     def __init__(self, hidden_dim, dropout_p=0.1):
@@ -21,11 +20,13 @@ class FFN(nn.Module):
         self.dropout_p = dropout_p
         self.dropout = nn.Dropout(dropout_p)
         self.linear1 = nn.Linear(hidden_dim, hidden_dim // 2)  # Adjusted dimensions
-        self.linear2 = nn.Linear(hidden_dim // 2, 1)  # Adjusted dimensions
+        self.linear2 = nn.Linear(hidden_dim // 2, hidden_dim // 2)  # Adjusted dimensions
+        self.linear3 = nn.Linear(hidden_dim // 2, 1)  # Adjusted dimensions
 
     def forward(self, x):
         x = self.dropout(F.relu(self.linear1(x)))
-        x = self.linear2(x)
+        x = self.dropout(F.relu(self.linear2(x)))
+        x = self.linear3(x)
         return x
 
 # Define the model
