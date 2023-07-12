@@ -24,11 +24,12 @@ class FFN(nn.Module):
         self.linear3 = nn.Linear(hidden_dim // 2, 1)
 
     def forward(self, x):
-        x = x.view(-1, self.hidden_dim)  # Adjust input tensor dimensions
+        x = x.reshape(-1, self.hidden_dim)  # Adjust input tensor dimensions
         x = self.dropout(F.relu(self.linear1(x)))
         x = self.dropout(F.relu(self.linear2(x)))
         x = self.linear3(x)
         return x
+
 
 
 
