@@ -28,7 +28,6 @@ class FFN(nn.Module):
         x = self.linear2(x)
         return x
 
-
 # Define the model
 class DistilBertForSequenceRegression(nn.Module):
     def __init__(self, config, ffn_hidden_dim=256, dropout_p=0.1):
