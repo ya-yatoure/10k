@@ -40,6 +40,8 @@ df = df.sample(frac=DATASET_FRACTION)
 
 # One-hot encode 'naics2'
 df = pd.get_dummies(df, columns=['naics2'])
+print(df.columns)
+
 
 # Define structured features and target
 structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
