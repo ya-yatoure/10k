@@ -21,7 +21,7 @@ EPOCHS = 10
 BATCH_SIZE = 16
 DATASET_FRACTION = 0.02
 TRAIN_TEST_SPLIT_RATIO = 0.2
-GRID_SEARCH = False  # Set this to True if you want to perform grid search
+GRID_SEARCH = TRUE  # Set this to True if you want to perform grid search
 
 # Grid of hyperparameters
 if GRID_SEARCH:
