@@ -44,7 +44,7 @@ print(df.columns)
 
 
 # Define structured features and target
-structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
+structured_features = ['logEMV', 'lev'] # + [col for col in df.columns if 'naics2' in col]
 target = 'ER_1'
 
 # Fit a regression model using structured data for the current 'day_type'
