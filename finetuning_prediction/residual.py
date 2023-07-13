@@ -165,6 +165,18 @@ if GRID_SEARCH:
                 loss.backward()
                 optimizer.step()
 
+            if epoch % 2 == 0:  # Print losses every 2 epochs
+            val_loss = 0.0
+            model.eval()
+            with torch.no_grad():
+                for batch in dataloaders['val']:
+                    input_ids, attention_mask, targets = [b.to(device) for b in batch]
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    loss = loss_func(outputs.view(-1), targets.view(-1))
+                    val_loss += loss.item()
+
+            print(f"Epoch: {epoch+1}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
+
         model.eval()
         predictions = []
         true_values = []
@@ -174,7 +186,7 @@ if GRID_SEARCH:
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 predictions.extend(outputs.detach().cpu().numpy())
                 true_values.extend(targets.detach().cpu().numpy())
-
+        
         r2 = r2_score(true_values, predictions)
         print(f'R2 score with learning rate {LEARNING_RATE} and epochs {EPOCHS}: {r2}')
 
@@ -196,7 +208,15 @@ else:
             total_loss += loss.item()
             loss.backward()
             optimizer.step()
-
+        if epoch % 2 == 0:  # Print losses every 2 epochs
+        val_loss = 0.0
+        model.eval()
+        with torch.no_grad():
+            for batch in dataloaders['val']:
+                input_ids, attention_mask, targets = [b.to(device) for b in batch]
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                loss = loss_func(outputs.view(-1), targets.view(-1))
+                val_loss += loss.item()
     model.eval()
     predictions = []
     true_values = []
