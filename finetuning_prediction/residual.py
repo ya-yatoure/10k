@@ -29,7 +29,7 @@ if GRID_SEARCH:
         'learning_rate': [0.01, 0.1],
         'epochs': [10, 20],
         'batch_size': [16, 32],
-        'nn_structure': [(30,1), (50,1), (30,20,1)]  # tuples represent sizes of layers in the additional network
+        'nn_structure': [(30,1), (256,1), (256,30,1)]  # tuples represent sizes of layers in the additional network
     }
 
 
@@ -37,7 +37,27 @@ if GRID_SEARCH:
 df = pd.read_csv("../Data/text_covars_to512.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
-# Model definition
+# Keep only rows where day_type == 'fiscal_policy_stimulus'
+df = df[df['day_type'] == 'fiscal_policy_stimulus']
+
+# One-hot encode 'naics2'
+df = pd.get_dummies(df, columns=['naics2'])
+
+# Define structured features and target
+structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
+target = 'ER_1'
+
+# Fit a regression model using structured data for the current 'day_type'
+X = df[structured_features].values
+y = df[target].values
+
+reg_model = LinearRegression()
+reg_model.fit(X, y)
+
+# Calculate residuals
+df['residuals'] = y - reg_model.predict(X)
+
+
 # Model definition
 class DistilBertForSequenceRegression(DistilBertModel):
     def __init__(self, config, nn_structure):
