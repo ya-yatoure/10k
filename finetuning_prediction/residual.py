@@ -211,8 +211,19 @@ else:
             total_loss += loss.item()
             loss.backward()
             optimizer.step()
+        
+        if epoch % 2 == 0:  # Print losses every 2 epochs
+            model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for batch in dataloaders['val']:
+                    input_ids, attention_mask, targets = [b.to(device) for b in batch]
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    loss = loss_func(outputs.view(-1), targets.view(-1))
+                    val_loss += loss.item()
 
-    
+            print(f"Epoch: {epoch+1}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
+
     model.eval()
     predictions = []
     true_values = []
