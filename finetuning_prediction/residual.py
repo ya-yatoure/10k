@@ -19,7 +19,7 @@ import pandas as pd
 LEARNING_RATE = 0.01
 EPOCHS = 10
 BATCH_SIZE = 16
-DATASET_FRACTION = 0.5
+DATASET_FRACTION = 1.0
 TRAIN_TEST_SPLIT_RATIO = 0.2
 GRID_SEARCH = True  # Set this to True if you want to perform grid search
 
