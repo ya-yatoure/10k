@@ -178,7 +178,7 @@ if GRID_SEARCH:
                     loss = loss_func(outputs.view(-1), targets.view(-1))
                     val_loss += loss.item()
 
-            print(f"Epoch: {epoch+1}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
+            print(f"Epoch: {epoch+2}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
 
         model.eval()
         predictions = []
@@ -222,7 +222,7 @@ else:
                     loss = loss_func(outputs.view(-1), targets.view(-1))
                     val_loss += loss.item()
 
-            print(f"Epoch: {epoch+1}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
+            print(f"Epoch: {epoch+2}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
 
     model.eval()
     predictions = []
