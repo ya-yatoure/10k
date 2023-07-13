@@ -69,8 +69,6 @@ class DistilBertForSequenceRegression(DistilBertModel):
 
 
 # Load data and preprocess
-df = pd.read_csv("../Data/text_covars_to512_2019HEADERS.csv")
-df = df.sample(frac=DATASET_FRACTION)
 df = df[df['day_type'] == 'fiscal_policy_stimulus']
 df = pd.get_dummies(df, columns=['naics2'])
 
