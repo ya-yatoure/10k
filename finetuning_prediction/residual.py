@@ -34,7 +34,7 @@ if GRID_SEARCH:
 
 
 # Load data n
-df = pd.read_csv("../Data/text_covars_to512.csv")
+df = pd.read_csv("../Data/text_mpe_512_sample.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
 
