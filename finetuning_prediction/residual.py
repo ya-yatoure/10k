@@ -119,7 +119,9 @@ for dataset, name in datasets:
 
 # Load pre-trained model
 config = DistilBertConfig.from_pretrained("distilbert-base-uncased")
-model = DistilBertForSequenceRegression(config)
+NN_STRUCTURE = (30, 1)  # define structure for additional layers
+model = DistilBertForSequenceRegression(config, NN_STRUCTURE)
+
 
 # Training loop
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
