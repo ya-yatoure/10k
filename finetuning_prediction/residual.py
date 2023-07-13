@@ -88,10 +88,6 @@ class DistilBertForSequenceRegression(DistilBertModel):
         return predictions if loss is None else (loss, predictions)
 
 
-# Load data and preprocess
-df = df[df['day_type'] == 'fiscal_policy_stimulus']
-df = pd.get_dummies(df, columns=['naics2'])
-
 # Train test split
 unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=TRAIN_TEST_SPLIT_RATIO)
