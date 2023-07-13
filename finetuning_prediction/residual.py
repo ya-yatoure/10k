@@ -37,8 +37,6 @@ if GRID_SEARCH:
 df = pd.read_csv("../Data/text_covars_to512.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
-# Keep only rows where day_type == 'fiscal_policy_stimulus'
-df = df[df['day_type'] == 'fiscal_policy_stimulus']
 
 # One-hot encode 'naics2'
 df = pd.get_dummies(df, columns=['naics2'])
