@@ -118,6 +118,9 @@ test_df['text'].fillna("", inplace=True)
 # Initialize tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
+# LOSS FUNCTION 
+loss_func = nn.MSELoss()
+
 # Tokenize and create dataloaders
 datasets = [(train_df, 'train'), (val_df, 'val'), (test_df, 'test')]
 dataloaders = {}
@@ -166,8 +169,8 @@ if GRID_SEARCH:
                 optimizer.step()
 
             if epoch % 2 == 0:  # Print losses every 2 epochs
-                val_loss = 0.0
                 model.eval()
+                val_loss = 0.0
             with torch.no_grad():
                 for batch in dataloaders['val']:
                     input_ids, attention_mask, targets = [b.to(device) for b in batch]
