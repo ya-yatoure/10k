@@ -67,6 +67,10 @@ class DistilBertForSequenceRegression(DistilBertModel):
         super().__init__(config)
         self.distilbert = DistilBertModel(config)
         
+        # Freeze the DistilBert parameters
+        for param in self.distilbert.parameters():
+            param.requires_grad = False
+
         # Define additional layers on top of distilbert based on the nn_structure
         layers = []
         for i in range(len(nn_structure)):
