@@ -102,9 +102,14 @@ val_df = df[df['cik'].isin(val_companies)]
 test_df = df[df['cik'].isin(test_companies)]
 
 # More preprocessing
+train_df = train_df.copy()
+val_df = val_df.copy()
+test_df = test_df.copy()
+
 train_df['text'].fillna("", inplace=True)
 val_df['text'].fillna("", inplace=True)
 test_df['text'].fillna("", inplace=True)
+
 
 # Initialize tokenizer
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
