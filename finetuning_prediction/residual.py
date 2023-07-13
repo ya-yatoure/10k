@@ -54,6 +54,9 @@ y = df[target].values
 reg_model = LinearRegression()
 reg_model.fit(X, y)
 
+# Print the R-squared for the regression model
+print(f'Training set R-squared for regression model: {reg_model.score(X, y)}')
+
 # Calculate residuals
 df['residuals'] = y - reg_model.predict(X)
 
