@@ -1,243 +1,233 @@
-from transformers import DistilBertModel, DistilBertTokenizer, DistilBertTokenizerFast
-from transformers import DistilBertForSequenceClassification, DistilBertConfig
+# Import necessary libraries
+from transformers import DistilBertTokenizerFast, DistilBertModel, AdamW, DistilBertConfig
+from transformers import get_linear_schedule_with_warmup
 
-from torch import nn
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import torch
-from torch import nn, optim
-from torch.utils.data import DataLoader, TensorDataset
-from torch.nn import DataParallel
-
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import r2_score
+from sklearn.model_selection import ParameterGrid
 
-# Define the hyperparameters
+from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification, AdamW
+from torch.utils.data import TensorDataset, DataLoader
+from torch import nn
+import torch
+import torch.optim as optim
+import pandas as pd
+
+# Define hyperparameters
+LEARNING_RATE = 0.01
+EPOCHS = 10
 BATCH_SIZE = 16
-EPOCHS = 100
-LEARNING_RATE = 1e-2
-LEARNING_RATE_DISTILBERT = 1e-4
-WEIGHT_DECAY = 1e-5
-DATASET_FRACTION = 0.5
+DATASET_FRACTION = 0.02
 TRAIN_TEST_SPLIT_RATIO = 0.2
+GRID_SEARCH = False  # Set this to True if you want to perform grid search
 
-tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
-scaler = StandardScaler()
+# Grid of hyperparameters
+if GRID_SEARCH:
+    hyperparams_grid = {
+        'learning_rate': [0.01, 0.1],
+        'epochs': [10, 20],
+        'batch_size': [16, 32],
+        'nn_structure': [(768, 1), (768, 30, 1), (768, 30, 30, 1)]  # tuples represent sizes of layers in the additional network
+    }
 
-df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
 
-# Use defined hyperparameter
+# Load data n
+df = pd.read_csv("../Data/text_covars_to512.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
-# one hot encoding 'naics2'
-df = pd.get_dummies(df, columns=['naics2'])
 
-# group by companies when test/train splitting so we don't have companies that appear in both test and train sets
+# One-hot encode 'naics2'
+df = pd.get_dummies(df, columns=['naics2'])
+print(df.columns)
+
+
+# Define structured features and target
+structured_features = ['logEMV', 'lev'] + [col for col in df.columns if 'naics2' in col]
+target = 'ER_1'
+
+# Fit a regression model using structured data for the current 'day_type'
+X = df[structured_features].values
+y = df[target].values
+
+reg_model = LinearRegression()
+reg_model.fit(X, y)
+
+# Print the R-squared for the regression model
+print(f'Training set R-squared for regression model: {reg_model.score(X, y)}')
+
+# Calculate residuals
+df['residuals'] = y - reg_model.predict(X)
+
+
+# Model definition
+class DistilBertForSequenceRegression(DistilBertModel):
+    def __init__(self, config, nn_structure):
+        super().__init__(config)
+        self.distilbert = DistilBertModel(config)
+        
+        # Freeze the DistilBert parameters
+        for param in self.distilbert.parameters():
+            param.requires_grad = False
+
+        # Define additional layers on top of distilbert based on the nn_structure
+        layers = []
+        for i in range(len(nn_structure)):
+            layers.append(nn.Linear(nn_structure[i][0], nn_structure[i][1]))
+            if i != len(nn_structure) - 1:  # we don't want ReLU after the last layer
+                layers.append(nn.ReLU())
+        self.additional_nn = nn.Sequential(*layers)
+        
+        self.init_weights()
+
+    def forward(self, input_ids=None, attention_mask=None, labels=None):
+        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
+        hidden_state = distilbert_output[0]  # Shape : [batch_size, seq_length, hidden_dim]
+        pooled_output = hidden_state[:, 0]  # Shape : [batch_size, hidden_dim]. We are taking the [CLS] representation
+
+        predictions = self.additional_nn(pooled_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.MSELoss()
+            loss = loss_fct(predictions.view(-1), labels.view(-1))
+        return predictions if loss is None else (loss, predictions)
+
+
+# Train test split
 unique_companies = df['cik'].unique()
 train_companies, test_companies = train_test_split(unique_companies, test_size=TRAIN_TEST_SPLIT_RATIO)
-
-# Split the train_companies into train and validation
 train_companies, val_companies = train_test_split(train_companies, test_size=0.2)
 
+# Create dataframes for each set
 train_df = df[df['cik'].isin(train_companies)]
 val_df = df[df['cik'].isin(val_companies)]
 test_df = df[df['cik'].isin(test_companies)]
-encodings = tokenizer(list(df['text']), truncation=True, padding=True)
 
-# structured columns now include the one-hot-encoded 'naics2' columns as well
-structured_columns = ['lev', 'logEMV'] + [col for col in df.columns if 'naics2' in col]
+# More preprocessing
+train_df = train_df.copy()
+val_df = val_df.copy()
+test_df = test_df.copy()
 
-# For Train and Test set
-train_encodings = tokenizer(list(train_df['text']), truncation=True, padding=True)
-train_input_ids = torch.tensor(train_encodings['input_ids'])
-train_attention_mask = torch.tensor(train_encodings['attention_mask'])
-
-# Only scale 'lev' and 'logEMV'
-train_structured_data_to_scale = scaler.fit_transform(train_df[['lev', 'logEMV']])
-train_structured_data_one_hot = train_df[[col for col in train_df.columns if 'naics2' in col]].values
-train_structured_data = np.concatenate((train_structured_data_to_scale, train_structured_data_one_hot), axis=1)
-train_structured_data = torch.tensor(train_structured_data, dtype=torch.float)
-
-train_target = torch.tensor(train_df['ER_1'].values, dtype=torch.float)
-
-test_encodings = tokenizer(list(test_df['text']), truncation=True, padding=True)
-test_input_ids = torch.tensor(test_encodings['input_ids'])
-test_attention_mask = torch.tensor(test_encodings['attention_mask'])
-
-# Only scale 'lev' and 'logEMV'
-test_structured_data_to_scale = scaler.transform(test_df[['lev', 'logEMV']])
-test_structured_data_one_hot = test_df[[col for col in test_df.columns if 'naics2' in col]].values
-test_structured_data = np.concatenate((test_structured_data_to_scale, test_structured_data_one_hot), axis=1)
-test_structured_data = torch.tensor(test_structured_data, dtype=torch.float)
-
-test_target = torch.tensor(test_df['ER_1'].values, dtype=torch.float)
-
-train_data = TensorDataset(train_input_ids, train_attention_mask, train_structured_data, train_target)
-test_data = TensorDataset(test_input_ids, test_attention_mask, test_structured_data, test_target)
-
-test_cik = test_df['cik'].values.tolist()
-
-val_encodings = tokenizer(list(val_df['text']), truncation=True, padding=True)
-val_input_ids = torch.tensor(val_encodings['input_ids'])
-val_attention_mask = torch.tensor(val_encodings['attention_mask'])
-
-# Only scale 'lev' and 'logEMV'
-val_structured_data_to_scale = scaler.transform(val_df[['lev', 'logEMV']])
-val_structured_data_one_hot = val_df[[col for col in val_df.columns if 'naics2' in col]].values
-val_structured_data = np.concatenate((val_structured_data_to_scale, val_structured_data_one_hot), axis=1)
-val_structured_data = torch.tensor(val_structured_data, dtype=torch.float)
-
-val_target = torch.tensor(val_df['ER_1'].values, dtype=torch.float)
-
-val_data = TensorDataset(val_input_ids, val_attention_mask, val_structured_data, val_target)
+train_df['text'].fillna("", inplace=True)
+val_df['text'].fillna("", inplace=True)
+test_df['text'].fillna("", inplace=True)
 
 
-# Use defined hyperparameters
-train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
-val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE, drop_last=True)
-test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE, drop_last=True)
+# Initialize tokenizer
+tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
-# define attention and dual input model classes here...
-# DEFINE MODEL ARCHITECTURE
-class DualInputModel(nn.Module):
-    def __init__(self, num_structured_features):
-        super(DualInputModel, self).__init__()
+# Tokenize and create dataloaders
+datasets = [(train_df, 'train'), (val_df, 'val'), (test_df, 'test')]
+dataloaders = {}
+for dataset, name in datasets:
+    encodings = tokenizer(list(dataset['text']), truncation=True, padding=True)
+    input_ids = torch.tensor(encodings['input_ids'])
+    attention_mask = torch.tensor(encodings['attention_mask'])
+    target = torch.tensor(dataset['residuals'].values, dtype=torch.float)
+    data = TensorDataset(input_ids, attention_mask, target)
+    dataloaders[name] = DataLoader(data, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 
-        # DistilBERT model for the text data (unfrozen)
-        self.distilbert = DistilBertModel.from_pretrained('distilbert-base-uncased')
-
-        # The size of the hidden state of DistilBERT (768 for 'distilbert-base-uncased')
-        self.hidden_state_size = self.distilbert.config.hidden_size
-
-        # A feed-forward neural network for the combined data
-        self.combined_ffnn = nn.Sequential(
-            nn.Linear(self.hidden_state_size + num_structured_features, 64),  # DistilBert [CLS] hidden state size + num_structured_features
-            nn.BatchNorm1d(64),  # Batch Normalization layer added here
-            nn.ReLU(),
-            nn.Linear(64, 1)
-        )
-
-    def forward(self, input_ids, attention_mask, structured_data):
-        # Pass the text data through DistilBert
-        distilbert_output = self.distilbert(input_ids=input_ids, attention_mask=attention_mask)
-
-        # DistilBert [CLS] token output
-        distilbert_cls_output = distilbert_output.last_hidden_state[:, 0, :]  # Take the hidden state of the first token ([CLS])
-
-        # Concatenate the DistilBert [CLS] output and structured data
-        combined_data = torch.cat((distilbert_cls_output, structured_data), dim=1)
-
-        # Pass the combined data through the combined feed-forward neural network
-        output = self.combined_ffnn(combined_data)
-
-        return output
+# Load pre-trained model
+config = DistilBertConfig.from_pretrained("distilbert-base-uncased")
+NN_STRUCTURE = [(768, 30), (30, 1)]  # define structure for additional layers
+model = DistilBertForSequenceRegression(config, NN_STRUCTURE)
 
 
-# Check if CUDA is available, otherwise use CPU
+# Training loop
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
+optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
 
-# Define the model
-model = DualInputModel(num_structured_features=len(structured_columns)).to(device)
+if GRID_SEARCH:
+    best_r2 = -float("inf")
+    best_params = None
 
-print(model)
-# Freeze the DistilBERT weights
-for param in model.distilbert.parameters():
-    param.requires_grad = False
+    for params in ParameterGrid(hyperparams_grid):
+        LEARNING_RATE = params['learning_rate']
+        EPOCHS = params['epochs']
+        BATCH_SIZE = params['batch_size']
+        NN_STRUCTURE = params['nn_structure']
+        
+        model = DistilBertForSequenceRegression(config, NN_STRUCTURE).to(device)
+        optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
 
-# Separately get the parameters of the DistilBERT model and the rest of your model
-distilbert_params = model.distilbert.parameters()
-other_params = [p for p in model.parameters() if p not in distilbert_params]
-
-# Use defined hyperparameters
-optimizer = optim.Adam([
-    {'params': distilbert_params, 'lr': LEARNING_RATE_DISTILBERT, 'weight_decay': WEIGHT_DECAY},
-    {'params': other_params, 'lr': LEARNING_RATE, 'weight_decay': WEIGHT_DECAY}
-])
-
-loss_fn = nn.MSELoss()
-
-train_losses, val_losses = [], []
-
-# initialize these for early stopping
-best_val_loss = float('inf')
-no_improve_epochs = 0
-
-for epoch in range(EPOCHS):
-    for dataloader, is_training in [(train_dataloader, True), (val_dataloader, False)]:
-        total_loss = total_samples = 0
-        model.train(is_training)
-
-        for batch in dataloader:
-            *inputs, targets = (t.to(device) for t in batch)
-            targets = targets.unsqueeze(1)
-
-            with torch.set_grad_enabled(is_training):
-                outputs = model(*inputs)
-                loss = loss_fn(outputs, targets)
-
-            if is_training:
+        for epoch in range(EPOCHS):
+            total_loss = 0
+            model.train()
+            for batch in dataloaders['train']:
+                input_ids, attention_mask, targets = [b.to(device) for b in batch]
                 optimizer.zero_grad()
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
+                loss = outputs[0]
+                total_loss += loss.item()
                 loss.backward()
                 optimizer.step()
 
-            total_loss += loss.item()
-            total_samples += 1
+            if epoch % 2 == 0:  # Print losses every 2 epochs
+                val_loss = 0.0
+                model.eval()
+                with torch.no_grad():
+                    for batch in dataloaders['val']:
+                        input_ids, attention_mask, targets = [b.to(device) for b in batch]
+                        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                        loss = loss_fct(outputs.view(-1), targets.view(-1))
+                        val_loss += loss.item()
 
-        avg_loss = total_loss / total_samples
-        print(f"{'Train' if is_training else 'Validation'} loss per observation {avg_loss}")
-        (train_losses if is_training else val_losses).append(avg_loss)
+                print(f"Epoch: {epoch+1}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
+
+        model.eval()
+        predictions = []
+        true_values = []
+        with torch.no_grad():
+            for batch in dataloaders['test']:
+                input_ids, attention_mask, targets = [b.to(device) for b in batch]
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                predictions.extend(outputs.detach().cpu().numpy())
+                true_values.extend(targets.detach().cpu().numpy())
         
-        # Early stopping
-        if not is_training:  # we are in validation
-            if avg_loss < best_val_loss:
-                best_val_loss = avg_loss
-                no_improve_epochs = 0
-            else:
-                no_improve_epochs += 1
-            if no_improve_epochs >= 30: 
-                print("Early stopping as no improvement in validation loss for 5 consecutive epochs.")
-                break
-    if no_improve_epochs >= 30:
-        break  # break out from epoch loop as well
+        r2 = r2_score(true_values, predictions)
+        print(f'R2 score with learning rate {LEARNING_RATE} and epochs {EPOCHS}: {r2}')
 
-# Generate predictions after all epochs
-model.eval()
+        if r2 > best_r2:
+            best_r2 = r2
+            best_params = params
 
-# Dictionary to store company ids and their respective predictions
-company_predictions = {}
-actuals = []
+    print(f'Best parameters are {best_params} with R2 score: {best_r2}')
 
-with torch.no_grad():
-    for i, batch in enumerate(test_dataloader):
-        test_inputs, test_masks, test_structured, targets = (t.to(device) for t in batch)
-        company_ids = test_cik[i * BATCH_SIZE: (i + 1) * BATCH_SIZE]  # Adjust indices based on batch size
-        outputs = model(test_inputs, test_masks, test_structured)
-        outputs = outputs.cpu().detach().numpy()
+else:
+    loss_fct = nn.MSELoss()
+    for epoch in range(EPOCHS):
+        total_loss = 0
+        model.train()
+        for batch in dataloaders['train']:
+            input_ids, attention_mask, targets = [b.to(device) for b in batch]
+            optimizer.zero_grad()
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=targets)
+            loss = outputs[0]
+            total_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+        if epoch % 2 == 0:  # Print losses every 2 epochs
+            val_loss = 0.0
+            model.eval()
+            with torch.no_grad():
+                for batch in dataloaders['val']:
+                    input_ids, attention_mask, targets = [b.to(device) for b in batch]
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    loss = loss_fct(outputs.view(-1), targets.view(-1))
+                    val_loss += loss.item()
+            print(f"Epoch: {epoch+1}, Train Loss: {total_loss/len(dataloaders['train'])}, Validation Loss: {val_loss/len(dataloaders['val'])}")
+    model.eval()
+    predictions = []
+    true_values = []
+    with torch.no_grad():
+        for batch in dataloaders['test']:
+            input_ids, attention_mask, targets = [b.to(device) for b in batch]
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            predictions.extend(outputs.detach().cpu().numpy())
+            true_values.extend(targets.detach().cpu().numpy())
 
-        # Group predictions by company id and take the average
-        for comp_id, pred, actual in zip(company_ids, outputs, targets.cpu().numpy()):
-            if comp_id in company_predictions:
-                company_predictions[comp_id].append(pred)
-            else:
-                company_predictions[comp_id] = [pred]
-                actuals.append(actual)  # Only need one actual value per company
-
-# Average the predictions for each company
-avg_company_predictions = {comp_id: np.mean(preds) for comp_id, preds in company_predictions.items()}
-
-# The 'avg_company_predictions' dictionary now holds the average prediction for each company
-predictions = np.array(list(avg_company_predictions.values()))
-actuals = np.array(actuals)
-
-r2 = r2_score(actuals, predictions)
-print(f"R^2 score: {r2}")
-
-plt.plot(train_losses, label='Training Loss per observation')
-plt.plot(val_losses, label='Validation Loss per observation')
-plt.xlabel('Epoch')
-plt.ylabel('Loss per observation')
-plt.legend()
-plt.show()
+    r2 = r2_score(true_values, predictions)
+    print(f'R2 score: {r2}')
