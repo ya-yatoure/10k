@@ -119,7 +119,7 @@ for dataset, name in datasets:
 
 # Load pre-trained model
 config = DistilBertConfig.from_pretrained("distilbert-base-uncased")
-NN_STRUCTURE = (30, 1)  # define structure for additional layers
+NN_STRUCTURE = (768, 30, 1)  # define structure for additional layers
 model = DistilBertForSequenceRegression(config, NN_STRUCTURE)
 
 
