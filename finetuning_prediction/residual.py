@@ -29,7 +29,7 @@ if GRID_SEARCH:
         'learning_rate': [0.01, 0.1],
         'epochs': [10, 20],
         'batch_size': [16, 32],
-        'nn_structure': [(768, 1), (768, 30, 1), (768, 30, 30, 1)]  # tuples represent sizes of layers in the additional network
+        'nn_structure': [[(768, 30), (30, 1)], [(768, 30, 30), (30, 1)], [(768, 30, 30, 30), (30, 1)]]
     }
 
 
