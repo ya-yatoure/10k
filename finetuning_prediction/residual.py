@@ -29,7 +29,7 @@ if GRID_SEARCH:
         'learning_rate': [0.01, 0.1],
         'epochs': [10, 20],
         'batch_size': [16, 32],
-        'nn_structure': [(30,1), (256,1), (256,30,1)]  # tuples represent sizes of layers in the additional network
+        'nn_structure': [(768, 1), (768, 30, 1), (768, 30, 30, 1)]  # tuples represent sizes of layers in the additional network
     }
 
 
@@ -66,9 +66,9 @@ class DistilBertForSequenceRegression(DistilBertModel):
         
         # Define additional layers on top of distilbert based on the nn_structure
         layers = []
-        for i in range(len(nn_structure)-1):
-            layers.append(nn.Linear(nn_structure[i], nn_structure[i+1]))
-            if i != len(nn_structure) - 2:  # we don't want ReLU after the last layer
+        for i in range(len(nn_structure)):
+            layers.append(nn.Linear(nn_structure[i][0], nn_structure[i][1]))
+            if i != len(nn_structure) - 1:  # we don't want ReLU after the last layer
                 layers.append(nn.ReLU())
         self.additional_nn = nn.Sequential(*layers)
         
@@ -119,7 +119,7 @@ for dataset, name in datasets:
 
 # Load pre-trained model
 config = DistilBertConfig.from_pretrained("distilbert-base-uncased")
-NN_STRUCTURE = (768, 30, 1)  # define structure for additional layers
+NNN_STRUCTURE = [(768, 30), (30, 1)]  # define structure for additional layers
 model = DistilBertForSequenceRegression(config, NN_STRUCTURE)
 
 
