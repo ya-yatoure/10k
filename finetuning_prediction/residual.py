@@ -16,12 +16,12 @@ import torch.optim as optim
 import pandas as pd
 
 # Define hyperparameters
-LEARNING_RATE = 0.01
-EPOCHS = 10
+LEARNING_RATE = 0.02
+EPOCHS = 20
 BATCH_SIZE = 16
 DATASET_FRACTION = 1.0
 TRAIN_TEST_SPLIT_RATIO = 0.2
-GRID_SEARCH = True  # Set this to True if you want to perform grid search
+GRID_SEARCH = False  # Set this to True if you want to perform grid search
 
 # Grid of hyperparameters
 if GRID_SEARCH:
@@ -34,7 +34,7 @@ if GRID_SEARCH:
 
 
 # Load data n
-df = pd.read_csv("../Data/text_mpe_512_sample.csv")
+df = pd.read_csv("../Data/text_opc_512_sample.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
 
