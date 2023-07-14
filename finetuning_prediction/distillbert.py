@@ -15,7 +15,7 @@ LEARNING_RATE = 5e-2
 DATASET_FRACTION = 0.4
 
 # Load data
-df = pd.read_csv("../Data/text_covars_to512_2019_sample_90mb.csv")
+df = pd.read_csv("../Data/merged_20200224_headers.csv")
 df = df.sample(frac=DATASET_FRACTION)
 
 # Target
