@@ -12,7 +12,7 @@ TRAIN_TEST_SPLIT_RATIO = 0.2
 BATCH_SIZE = 16
 EPOCHS = 25
 LEARNING_RATE = 5e-2
-DATASET_FRACTION = 0.4
+DATASET_FRACTION = 1.0
 
 # Load data
 df = pd.read_csv("../Data/merged_20200224_headers.csv")
@@ -55,12 +55,12 @@ class DistilBertForSequenceRegression(DistilBertModel):
         super().__init__(config)
         self.distilbert = DistilBertModel(config)
         self.pre_classifier = nn.Sequential(
-            nn.Linear(config.dim, config.dim),  # First Linear layer
+            nn.Linear(config.dim, 30),  # First Linear layer
             nn.ReLU(),  # ReLU activation
-            nn.Linear(config.dim, config.dim // 2),  # Second Linear layer
+            nn.Linear(30, 10),  # Second Linear layer
             nn.ReLU()  # ReLU activation
         )
-        self.regressor = nn.Linear(config.dim//2, 1)  # Output layer
+        self.regressor = nn.Linear(10, 1)  # Output layer
         self.dropout = nn.Dropout(config.seq_classif_dropout)
         self.init_weights()
 
